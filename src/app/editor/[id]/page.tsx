@@ -1,5 +1,5 @@
 'use client';
-import { use, useEffect, useState, useCallback, useRef } from 'react';
+import { use, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Presentation, SlideElement, Slide } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
@@ -22,6 +22,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [zoom, setZoom] = useState(0.7);
+  const [saveStatus, setSaveStatus] = useState<'saved' | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const p = storage.get(id);
@@ -47,24 +49,66 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     addElement,
     updateElement,
     removeElement,
+    duplicateElement,
     setTheme,
     setTitle,
+    resetPresentation,
   } = usePresentation(presentation ?? ({} as Presentation));
 
-  // Keyboard shortcuts
+  // Fix: sync useHistory state when the loaded presentation arrives
+  useEffect(() => {
+    if (presentation) {
+      resetPresentation(presentation);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presentation]);
+
+  // Safe derived state — uses optional chaining so it's crash-safe before pres is initialized
+  const activeSlide: Slide | null = pres.slides?.[activeIndex] ?? null;
+  const selectedElements: SlideElement[] = activeSlide
+    ? activeSlide.elements.filter((e) => selectedIds.includes(e.id))
+    : [];
+
+  // Persist all state changes (covers undo/redo which bypass the update() path)
+  useEffect(() => {
+    if (!pres.id || !pres.slides) return;
+    storage.set(pres);
+    setSaveStatus('saved');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSaveStatus(null), 1500);
+  }, [pres]);
+
+  // Keyboard shortcuts — uses refs to avoid stale closures on hot-path handlers
+  const stateRef = useRef({ activeSlide, selectedIds, pres, duplicateElement, undo, redo });
+  stateRef.current = { activeSlide, selectedIds, pres, duplicateElement, undo, redo };
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const { activeSlide: slide, selectedIds: ids, pres: p, duplicateElement: dupEl, undo: u, redo: r } = stateRef.current;
       const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
-      if (ctrl && e.key === '=' ) { e.preventDefault(); setZoom((z) => Math.min(2, z + 0.1)); }
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.contentEditable === 'true';
+
+      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); u(); }
+      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); r(); }
+      if (ctrl && e.key === '=') { e.preventDefault(); setZoom((z) => Math.min(2, z + 0.1)); }
       if (ctrl && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(0.25, z - 0.1)); }
       if (ctrl && e.key === '0') { e.preventDefault(); setZoom(0.7); }
       if (e.key === 'F5' || (ctrl && e.key === 'Enter')) { e.preventDefault(); setShowPreview(true); }
+      if (ctrl && e.key === 's') {
+        e.preventDefault();
+        if (p.id) storage.set(p);
+        setSaveStatus('saved');
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => setSaveStatus(null), 1500);
+      }
+      if (ctrl && e.key === 'd' && !isInput) {
+        e.preventDefault();
+        if (ids.length === 1 && slide) dupEl(slide.id, ids[0]);
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [undo, redo]);
+  }, []); // stable: all mutable state accessed via stateRef
 
   if (!loaded) {
     return (
@@ -74,7 +118,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     );
   }
 
-  if (notFound || !presentation) {
+  if (notFound) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, background: 'var(--bg)', color: 'var(--text)' }}>
         <p>Presentation not found.</p>
@@ -85,10 +129,14 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     );
   }
 
-  const activeSlide = pres.slides[activeIndex] ?? null;
-  const selectedElements = activeSlide
-    ? activeSlide.elements.filter((e) => selectedIds.includes(e.id))
-    : [];
+  // Guard: pres hasn't been synced yet (reset effect fires after render)
+  if (!pres.id || !pres.slides) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+        Loading…
+      </div>
+    );
+  }
 
   const handleSelectSlide = (index: number) => {
     setActiveIndex(index);
@@ -120,6 +168,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         onPreview={() => setShowPreview(true)}
         zoom={zoom}
         onZoom={setZoom}
+        saveStatus={saveStatus}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -133,7 +182,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           onMoveSlide={moveSlide}
         />
 
-        {/* Main canvas area */}
         <div
           style={{
             flex: 1,
@@ -158,9 +206,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
               selectedIds={selectedIds}
               onSelectIds={setSelectedIds}
               onUpdateElement={(elementId, updater) => {
-                if (activeSlide) {
-                  updateElement(activeSlide.id, elementId, updater);
-                }
+                if (activeSlide) updateElement(activeSlide.id, elementId, updater);
               }}
               onUpdateSlide={(updater) => {
                 if (activeSlide) updateSlide(activeSlide.id, updater);
@@ -174,13 +220,31 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           presentation={pres}
           slide={activeSlide}
           selectedElements={selectedElements}
-          onUpdateElement={(id, updater) => {
-            if (activeSlide) updateElement(activeSlide.id, id, updater);
+          onUpdateElement={(elId, updater) => {
+            if (activeSlide) updateElement(activeSlide.id, elId, updater);
           }}
           onUpdateSlide={(updater) => {
             if (activeSlide) updateSlide(activeSlide.id, updater);
           }}
           onSetTheme={setTheme}
+          onDuplicateElement={(elId) => {
+            if (activeSlide) duplicateElement(activeSlide.id, elId);
+          }}
+          onRemoveElement={(elId) => {
+            if (activeSlide) removeElement(activeSlide.id, elId);
+          }}
+          onBringToFront={(elId) => {
+            if (activeSlide) {
+              const maxZ = Math.max(0, ...activeSlide.elements.map((e) => e.zIndex));
+              updateElement(activeSlide.id, elId, (e) => ({ ...e, zIndex: maxZ + 1 }));
+            }
+          }}
+          onSendToBack={(elId) => {
+            if (activeSlide) {
+              const minZ = Math.min(0, ...activeSlide.elements.map((e) => e.zIndex));
+              updateElement(activeSlide.id, elId, (e) => ({ ...e, zIndex: Math.max(0, minZ - 1) }));
+            }
+          }}
         />
       </div>
 

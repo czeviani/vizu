@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
-import type { Presentation, Slide, SlideElement, TextElement, ShapeElement, IconElement } from '@/types/slide';
+import type { Presentation, SlideElement, TextElement, ShapeElement, IconElement, ImageElement } from '@/types/slide';
 import { exportToPptx } from '@/lib/pptxExport';
 
 interface Props {
@@ -17,6 +17,7 @@ interface Props {
   onPreview: () => void;
   zoom: number;
   onZoom: (z: number) => void;
+  saveStatus: 'saved' | null;
 }
 
 const ICON_NAMES = [
@@ -85,6 +86,7 @@ export function Toolbar({
   onPreview,
   zoom,
   onZoom,
+  saveStatus,
 }: Props) {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
@@ -130,6 +132,26 @@ export function Toolbar({
         textTransform: 'none',
       },
     } as TextElement);
+
+  const addImage = () =>
+    add({
+      id: uuid(),
+      type: 'image',
+      src: '',
+      alt: 'Image',
+      objectFit: 'cover',
+      x: 200,
+      y: 130,
+      width: 400,
+      height: 240,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 10,
+      locked: false,
+      visible: true,
+      border: { width: 0, color: '', style: 'none', radius: 0 },
+      shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
+    } as ImageElement);
 
   const addShape = (shape: ShapeElement['shape']) =>
     add({
@@ -207,16 +229,7 @@ export function Toolbar({
       }}
     >
       {/* Logo */}
-      <div
-        style={{
-          fontWeight: 700,
-          fontSize: 16,
-          color: 'var(--accent)',
-          letterSpacing: -0.5,
-          marginRight: 8,
-          userSelect: 'none',
-        }}
-      >
+      <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--accent)', letterSpacing: -0.5, marginRight: 8, userSelect: 'none' }}>
         Vizu
       </div>
 
@@ -226,37 +239,24 @@ export function Toolbar({
           autoFocus
           defaultValue={presentation.title}
           onBlur={(e) => { onSetTitle(e.target.value); setEditingTitle(false); }}
-          onKeyDown={(e) => { if (e.key === 'Enter') { onSetTitle(e.currentTarget.value); setEditingTitle(false); } }}
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            border: '1px solid var(--accent)',
-            borderRadius: 4,
-            padding: '2px 8px',
-            background: 'var(--surface)',
-            color: 'var(--text)',
-            outline: 'none',
-            width: 200,
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { onSetTitle(e.currentTarget.value); setEditingTitle(false); } if (e.key === 'Escape') setEditingTitle(false); }}
+          style={{ fontSize: 13, fontWeight: 500, border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 8px', background: 'var(--surface)', color: 'var(--text)', outline: 'none', width: 200 }}
         />
       ) : (
         <span
           onClick={() => setEditingTitle(true)}
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--text)',
-            padding: '2px 8px',
-            borderRadius: 4,
-            cursor: 'text',
-            maxWidth: 200,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', padding: '2px 8px', borderRadius: 4, cursor: 'text', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title="Click to rename"
         >
           {presentation.title}
+        </span>
+      )}
+
+      {/* Save indicator */}
+      {saveStatus && (
+        <span style={{ fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>
+          Saved
         </span>
       )}
 
@@ -284,49 +284,20 @@ export function Toolbar({
         Text
       </ToolBtn>
 
-      {/* Shape dropdown */}
-      <div style={{ position: 'relative' }}>
-        <ToolBtn title="Add shape" disabled={!activeSlideId}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-          </svg>
-          Shape
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </ToolBtn>
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '4px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 4,
-            zIndex: 100,
-            minWidth: 160,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            pointerEvents: 'none',
-            opacity: 0,
-          }}
-          // We use CSS hover trick below with a wrapper
-        />
-      </div>
+      <ToolBtn title="Add image" onClick={addImage} disabled={!activeSlideId}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="m21 15-5-5L5 21" />
+        </svg>
+        Image
+      </ToolBtn>
 
-      {/* Better shape menu with hover */}
       <ShapeMenu onAddShape={addShape} disabled={!activeSlideId} />
 
       {/* Icon picker */}
       <div style={{ position: 'relative' }}>
-        <ToolBtn
-          title="Add icon"
-          onClick={() => setShowIconPicker((v) => !v)}
-          disabled={!activeSlideId}
-        >
+        <ToolBtn title="Add icon" onClick={() => setShowIconPicker((v) => !v)} disabled={!activeSlideId}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
@@ -335,67 +306,22 @@ export function Toolbar({
 
         {showIconPicker && (
           <>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-              onClick={() => setShowIconPicker(false)}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                padding: 12,
-                zIndex: 99,
-                width: 280,
-                boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
-              }}
-            >
+            <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setShowIconPicker(false)} />
+            <div style={{ position: 'absolute', top: '100%', left: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, zIndex: 99, width: 280, boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}>
               <input
                 autoFocus
                 value={iconSearch}
                 onChange={(e) => setIconSearch(e.target.value)}
                 placeholder="Search icons..."
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
-                  fontSize: 13,
-                  background: 'var(--bg)',
-                  color: 'var(--text)',
-                  outline: 'none',
-                  marginBottom: 10,
-                  boxSizing: 'border-box',
-                }}
+                style={{ width: '100%', padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
               />
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(6, 1fr)',
-                  gap: 4,
-                  maxHeight: 200,
-                  overflowY: 'auto',
-                }}
-              >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
                 {filteredIcons.map((name) => (
                   <button
                     key={name}
                     title={name}
                     onClick={() => addIcon(name)}
-                    style={{
-                      padding: 8,
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--text)',
-                    }}
+                    style={{ padding: 8, border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                   >
@@ -424,7 +350,7 @@ export function Toolbar({
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35M11 8v6M8 11h6" />
         </svg>
       </ToolBtn>
-      <ToolBtn title="Fit to window" onClick={() => onZoom(0.7)}>
+      <ToolBtn title="Fit to window (Ctrl+0)" onClick={() => onZoom(0.7)}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
         </svg>
@@ -433,7 +359,7 @@ export function Toolbar({
       <Sep />
 
       {/* Preview */}
-      <ToolBtn title="Fullscreen preview" onClick={onPreview}>
+      <ToolBtn title="Fullscreen preview (F5)" onClick={onPreview}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M5 3H3v4M21 3h-2v4M5 21H3v-4M21 21h-2v-4" />
           <rect x="7" y="7" width="10" height="10" rx="1" />
@@ -445,21 +371,7 @@ export function Toolbar({
       <button
         onClick={handleExport}
         disabled={exporting}
-        style={{
-          padding: '6px 14px',
-          background: 'var(--accent)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 6,
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: exporting ? 'wait' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          opacity: exporting ? 0.7 : 1,
-          marginLeft: 4,
-        }}
+        style={{ padding: '6px 14px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: exporting ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: exporting ? 0.7 : 1, marginLeft: 4 }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -499,39 +411,12 @@ function ShapeMenu({ onAddShape, disabled }: { onAddShape: (s: ShapeElement['sha
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: 8,
-              zIndex: 99,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 4,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-              minWidth: 200,
-            }}
-          >
+          <div style={{ position: 'absolute', top: '100%', left: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 8, zIndex: 99, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: 200 }}>
             {shapes.map((s) => (
               <button
                 key={s.id}
                 onClick={() => { onAddShape(s.id); setOpen(false); }}
-                style={{
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  fontSize: 12,
-                  color: 'var(--text)',
-                }}
+                style={{ padding: '8px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
@@ -549,7 +434,6 @@ function ShapeMenu({ onAddShape, disabled }: { onAddShape: (s: ShapeElement['sha
 }
 
 function IconPreview({ name }: { name: string }) {
-  // We lazy-import from lucide but since we can't do async here we use a data approach
   const paths: Record<string, string> = {
     Star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
     Heart: 'M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z',

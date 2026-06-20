@@ -7,7 +7,7 @@ import { createSlideFromLayout, createBlankSlide } from '@/lib/templates';
 import { storage } from '@/lib/storage';
 
 export function usePresentation(initial: Presentation) {
-  const { state: presentation, set, undo, redo, canUndo, canRedo } = useHistory<Presentation>(initial);
+  const { state: presentation, set, undo, redo, canUndo, canRedo, reset } = useHistory<Presentation>(initial);
 
   const save = useCallback(
     (p?: Presentation) => {
@@ -163,6 +163,11 @@ export function usePresentation(initial: Presentation) {
     [update]
   );
 
+  const resetPresentation = useCallback(
+    (p: Presentation) => reset(p),
+    [reset]
+  );
+
   return {
     presentation,
     undo,
@@ -182,5 +187,6 @@ export function usePresentation(initial: Presentation) {
     setTheme,
     setTitle,
     save,
+    resetPresentation,
   };
 }

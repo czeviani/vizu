@@ -183,7 +183,7 @@ function processSlide(pptx: PptxGenJS, slide: Slide) {
 export async function exportToPptx(presentation: Presentation): Promise<Blob> {
   const pptx = new PptxGenJS();
 
-  pptx.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 in
+  pptx.layout = 'LAYOUT_16x9'; // 10 x 5.63 in — matches PX_TO_IN = 10/960
   pptx.title = presentation.title;
   pptx.subject = presentation.metadata.description ?? '';
   pptx.author = presentation.metadata.author ?? 'Vizu';

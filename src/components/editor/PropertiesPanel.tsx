@@ -13,9 +13,26 @@ interface Props {
   onUpdateElement: (id: string, updater: (e: SlideElement) => SlideElement) => void;
   onUpdateSlide: (updater: (s: Slide) => Slide) => void;
   onSetTheme: (theme: Theme) => void;
+  onDuplicateElement?: (id: string) => void;
+  onRemoveElement?: (id: string) => void;
+  onBringToFront?: (id: string) => void;
+  onSendToBack?: (id: string) => void;
 }
 
 type Tab = 'element' | 'slide' | 'theme';
+
+const actionBtnStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '4px 8px',
+  background: 'transparent',
+  border: '1px solid var(--border)',
+  borderRadius: 5,
+  fontSize: 11,
+  color: 'var(--text)',
+  cursor: 'pointer',
+};
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -346,6 +363,72 @@ function TextProperties({
             ]}
           />
         </Row>
+      </Section>
+    </>
+  );
+}
+
+function ImageProperties({
+  el,
+  onChange,
+}: {
+  el: ImageElement;
+  onChange: (updater: (e: SlideElement) => SlideElement) => void;
+}) {
+  const upd = (props: Partial<ImageElement>) =>
+    onChange((e) => ({ ...e, ...props } as ImageElement));
+
+  return (
+    <>
+      <Section title="Image">
+        <Row>
+          <Label>URL</Label>
+          <input
+            type="text"
+            value={el.src}
+            onChange={(e) => upd({ src: e.target.value })}
+            placeholder="https://..."
+            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </Row>
+        <Row>
+          <Label>Fit</Label>
+          <SelectInput
+            value={el.objectFit}
+            onChange={(v) => upd({ objectFit: v as 'cover' | 'contain' | 'fill' })}
+            options={[
+              { value: 'cover', label: 'Cover' },
+              { value: 'contain', label: 'Contain' },
+              { value: 'fill', label: 'Fill' },
+            ]}
+          />
+        </Row>
+        <Row>
+          <Label>Alt Text</Label>
+          <input
+            type="text"
+            value={el.alt}
+            onChange={(e) => upd({ alt: e.target.value })}
+            placeholder="Description"
+            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </Row>
+      </Section>
+      <Section title="Border">
+        <Row>
+          <Label>Radius</Label>
+          <NumberInput value={el.border.radius} onChange={(v) => upd({ border: { ...el.border, radius: v } })} min={0} max={200} suffix="px" />
+        </Row>
+        <Row>
+          <Label>Width</Label>
+          <NumberInput value={el.border.width} onChange={(v) => upd({ border: { ...el.border, width: v } })} min={0} max={20} suffix="px" />
+        </Row>
+        {el.border.width > 0 && (
+          <Row>
+            <Label>Color</Label>
+            <ColorInput value={el.border.color || '#000000'} onChange={(v) => upd({ border: { ...el.border, color: v } })} />
+          </Row>
+        )}
       </Section>
     </>
   );
@@ -689,6 +772,10 @@ export function PropertiesPanel({
   onUpdateElement,
   onUpdateSlide,
   onSetTheme,
+  onDuplicateElement,
+  onRemoveElement,
+  onBringToFront,
+  onSendToBack,
 }: Props) {
   const [tab, setTab] = useState<Tab>('element');
 
@@ -761,6 +848,25 @@ export function PropertiesPanel({
             )}
             {el && (
               <>
+                {/* Element actions */}
+                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  <button onClick={() => onBringToFront?.(el.id)} title="Bring to front" style={actionBtnStyle}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                    Front
+                  </button>
+                  <button onClick={() => onSendToBack?.(el.id)} title="Send to back" style={actionBtnStyle}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
+                    Back
+                  </button>
+                  <button onClick={() => onDuplicateElement?.(el.id)} title="Duplicate (Ctrl+D)" style={actionBtnStyle}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                    Copy
+                  </button>
+                  <button onClick={() => onRemoveElement?.(el.id)} title="Delete" style={{ ...actionBtnStyle, color: '#ef4444' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                    Delete
+                  </button>
+                </div>
                 <CommonProperties
                   el={el}
                   onChange={(updater) => onUpdateElement(el.id, updater)}
@@ -768,6 +874,12 @@ export function PropertiesPanel({
                 {el.type === 'text' && (
                   <TextProperties
                     el={el as TextElement}
+                    onChange={(updater) => onUpdateElement(el.id, updater)}
+                  />
+                )}
+                {el.type === 'image' && (
+                  <ImageProperties
+                    el={el as ImageElement}
                     onChange={(updater) => onUpdateElement(el.id, updater)}
                   />
                 )}
