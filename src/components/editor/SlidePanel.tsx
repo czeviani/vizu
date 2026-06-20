@@ -1,8 +1,8 @@
 'use client';
 import { useState, useCallback } from 'react';
 import type { Presentation, LayoutType } from '@/types/slide';
-import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
 import { SlideMiniature } from './SlideMiniature';
+import { t } from '@/lib/i18n';
 
 interface Props {
   presentation: Presentation;
@@ -15,13 +15,13 @@ interface Props {
 }
 
 const LAYOUTS: { id: LayoutType; label: string }[] = [
-  { id: 'blank', label: 'Blank' },
-  { id: 'cover', label: 'Cover' },
-  { id: 'section', label: 'Section' },
-  { id: 'content', label: 'Content' },
-  { id: 'comparison', label: 'Comparison' },
-  { id: 'quote', label: 'Quote' },
-  { id: 'closing', label: 'Closing' },
+  { id: 'blank', label: t.layout_blank },
+  { id: 'cover', label: t.layout_cover },
+  { id: 'section', label: t.layout_section },
+  { id: 'content', label: t.layout_content },
+  { id: 'comparison', label: t.layout_comparison },
+  { id: 'quote', label: t.layout_quote },
+  { id: 'closing', label: t.layout_closing },
 ];
 
 export function SlidePanel({
@@ -72,59 +72,30 @@ export function SlidePanel({
         overflow: 'hidden',
       }}
     >
-      {/* Add slide button */}
+      {/* Add slide */}
       <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
         <button
           onClick={() => setShowLayoutPicker((v) => !v)}
           style={{
-            width: '100%',
-            padding: '7px 10px',
-            background: 'var(--accent)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            width: '100%', padding: '7px 10px',
+            background: 'var(--accent)', color: '#fff', border: 'none',
+            borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Add Slide
+          {t.slides_add}
         </button>
 
         {showLayoutPicker && (
-          <div
-            style={{
-              marginTop: 6,
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              overflow: 'hidden',
-            }}
-          >
+          <div style={{ marginTop: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
             {LAYOUTS.map((l) => (
               <button
                 key={l.id}
-                onClick={() => {
-                  onAddSlide(l.id, activeIndex);
-                  setShowLayoutPicker(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  fontSize: 13,
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid var(--border)',
-                }}
+                onClick={() => { onAddSlide(l.id, activeIndex); setShowLayoutPicker(false); }}
+                style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
@@ -148,37 +119,21 @@ export function SlidePanel({
             onContextMenu={(e) => handleContextMenu(e, slide.id)}
             onClick={() => onSelectSlide(index)}
             style={{
-              padding: '6px 10px',
-              cursor: 'pointer',
+              padding: '6px 10px', cursor: 'pointer',
               background: activeIndex === index ? 'var(--accent-subtle)' : dragOver === index ? 'var(--hover)' : 'transparent',
               borderLeft: activeIndex === index ? '2.5px solid var(--accent)' : '2.5px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+              display: 'flex', alignItems: 'center', gap: 8,
               transition: 'background 0.12s',
             }}
           >
-            <span
-              style={{
-                fontSize: 10,
-                color: 'var(--text-secondary)',
-                minWidth: 18,
-                textAlign: 'center',
-              }}
-            >
+            <span style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 18, textAlign: 'center' }}>
               {index + 1}
             </span>
-            <div
-              style={{
-                width: 120,
-                height: 68,
-                flexShrink: 0,
-                background: '#f1f5f9',
-                borderRadius: 3,
-                overflow: 'hidden',
-                border: activeIndex === index ? '1.5px solid var(--accent)' : '1px solid var(--border)',
-              }}
-            >
+            <div style={{
+              width: 120, height: 68, flexShrink: 0,
+              background: '#f1f5f9', borderRadius: 3, overflow: 'hidden',
+              border: activeIndex === index ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+            }}>
               <SlideMiniature slide={slide} presentation={presentation} />
             </div>
           </div>
@@ -188,37 +143,24 @@ export function SlidePanel({
       {/* Context menu */}
       {contextMenu && (
         <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 999 }}
-            onClick={() => setContextMenu(null)}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              left: contextMenu.x,
-              top: contextMenu.y,
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: '4px 0',
-              zIndex: 1000,
-              minWidth: 160,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            }}
-          >
+          <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setContextMenu(null)} />
+          <div style={{
+            position: 'fixed', left: contextMenu.x, top: contextMenu.y,
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+            padding: '4px 0', zIndex: 1000, minWidth: 160,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          }}>
             {[
               {
-                label: 'Duplicate',
+                label: t.slide_duplicate,
                 icon: 'M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8l-6-4z',
                 action: () => { onDuplicateSlide(contextMenu.slideId); setContextMenu(null); },
               },
               {
-                label: 'Delete',
+                label: t.slide_delete,
                 icon: 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
                 action: () => {
-                  if (presentation.slides.length > 1) {
-                    onRemoveSlide(contextMenu.slideId);
-                  }
+                  if (presentation.slides.length > 1) onRemoveSlide(contextMenu.slideId);
                   setContextMenu(null);
                 },
                 danger: true,
@@ -228,17 +170,9 @@ export function SlidePanel({
                 key={item.label}
                 onClick={item.action}
                 style={{
-                  width: '100%',
-                  padding: '8px 14px',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  fontSize: 13,
-                  color: item.danger ? '#ef4444' : 'var(--text)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
+                  width: '100%', padding: '8px 14px', background: 'transparent', border: 'none',
+                  textAlign: 'left', fontSize: 13, color: item.danger ? '#ef4444' : 'var(--text)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}

@@ -8,30 +8,57 @@ interface Props {
   editing: boolean;
   onStartEdit: () => void;
   onChange: (content: string) => void;
+  onExitEdit?: () => void;
 }
 
-export function TextEl({ element: el, selected, editing, onStartEdit, onChange }: Props) {
+export function TextEl({ element: el, editing, onStartEdit, onChange, onExitEdit }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const wasEditingRef = useRef(false);
 
   useEffect(() => {
     if (!ref.current) return;
-    if (editing && document.activeElement !== ref.current) {
+    const entering = editing && !wasEditingRef.current;
+    wasEditingRef.current = editing;
+
+    if (entering) {
+      // Set initial content ONCE when entering edit mode.
+      // We do NOT use React-controlled content during editing to avoid cursor jumps.
+      ref.current.innerHTML = el.content.replace(/\n/g, '<br/>');
       ref.current.focus();
-      // Place cursor at end
-      const range = document.createRange();
-      range.selectNodeContents(ref.current);
-      range.collapse(false);
+      // Move cursor to end
       const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(range);
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(ref.current);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     }
-  }, [editing]);
+  }, [editing]); // intentionally excludes el.content — DOM is source of truth while editing
 
   const handleInput = useCallback(() => {
     if (ref.current) onChange(ref.current.innerText);
   }, [onChange]);
 
-  const va = el.verticalAlign === 'middle' ? 'center' : el.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start';
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (ref.current) onChange(ref.current.innerText);
+        onExitEdit?.();
+      }
+    },
+    [onChange, onExitEdit]
+  );
+
+  const va =
+    el.verticalAlign === 'middle'
+      ? 'center'
+      : el.verticalAlign === 'bottom'
+      ? 'flex-end'
+      : 'flex-start';
 
   return (
     <div
@@ -42,7 +69,10 @@ export function TextEl({ element: el, selected, editing, onStartEdit, onChange }
         alignItems: va,
         background: el.background === 'transparent' ? undefined : el.background,
         borderRadius: el.border.radius,
-        border: el.border.style !== 'none' ? `${el.border.width}px ${el.border.style} ${el.border.color}` : undefined,
+        border:
+          el.border.style !== 'none'
+            ? `${el.border.width}px ${el.border.style} ${el.border.color}`
+            : undefined,
         padding: el.padding,
         overflow: 'hidden',
         boxSizing: 'border-box',
@@ -54,6 +84,7 @@ export function TextEl({ element: el, selected, editing, onStartEdit, onChange }
         suppressContentEditableWarning
         onDoubleClick={onStartEdit}
         onInput={handleInput}
+        onKeyDown={handleKeyDown}
         style={{
           fontFamily: el.style.fontFamily,
           fontSize: el.style.fontSize,
@@ -71,11 +102,14 @@ export function TextEl({ element: el, selected, editing, onStartEdit, onChange }
           outline: 'none',
           cursor: editing ? 'text' : 'default',
           userSelect: editing ? 'text' : 'none',
+          minHeight: '1em',
         }}
-        dangerouslySetInnerHTML={!editing ? { __html: el.content.replace(/\n/g, '<br/>') } : undefined}
-      >
-        {editing ? el.content : undefined}
-      </div>
+        // During editing: React must NOT touch the DOM (cursor would jump).
+        // When not editing: render content as HTML (supports line breaks).
+        dangerouslySetInnerHTML={
+          editing ? undefined : { __html: el.content.replace(/\n/g, '<br/>') }
+        }
+      />
     </div>
   );
 }

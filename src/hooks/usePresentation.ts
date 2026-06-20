@@ -2,7 +2,10 @@
 import { useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useHistory } from './useHistory';
-import type { Presentation, Slide, SlideElement, Theme, LayoutType } from '@/types/slide';
+import type {
+  Presentation, Slide, SlideElement, Theme, LayoutType,
+  TextElement, ShapeElement, IconElement, ThemeColors,
+} from '@/types/slide';
 import { createSlideFromLayout, createBlankSlide } from '@/lib/templates';
 import { storage } from '@/lib/storage';
 
@@ -10,9 +13,7 @@ export function usePresentation(initial: Presentation) {
   const { state: presentation, set, undo, redo, canUndo, canRedo, reset } = useHistory<Presentation>(initial);
 
   const save = useCallback(
-    (p?: Presentation) => {
-      storage.set(p ?? presentation);
-    },
+    (p?: Presentation) => { storage.set(p ?? presentation); },
     [presentation]
   );
 
@@ -32,8 +33,7 @@ export function usePresentation(initial: Presentation) {
   const addSlide = useCallback(
     (layout: LayoutType = 'blank', afterIndex?: number) => {
       update((p) => {
-        const slide =
-          layout === 'blank' ? createBlankSlide() : createSlideFromLayout(layout, p.theme);
+        const slide = layout === 'blank' ? createBlankSlide() : createSlideFromLayout(layout, p.theme);
         const slides = [...p.slides];
         const idx = afterIndex !== undefined ? afterIndex + 1 : slides.length;
         slides.splice(idx, 0, slide);
@@ -48,7 +48,11 @@ export function usePresentation(initial: Presentation) {
       update((p) => {
         const idx = p.slides.findIndex((s) => s.id === slideId);
         if (idx === -1) return p;
-        const copy: Slide = { ...p.slides[idx], id: uuid(), elements: p.slides[idx].elements.map((e) => ({ ...e, id: uuid() })) };
+        const copy: Slide = {
+          ...p.slides[idx],
+          id: uuid(),
+          elements: p.slides[idx].elements.map((e) => ({ ...e, id: uuid() })),
+        };
         const slides = [...p.slides];
         slides.splice(idx + 1, 0, copy);
         return { ...p, slides };
@@ -59,10 +63,7 @@ export function usePresentation(initial: Presentation) {
 
   const removeSlide = useCallback(
     (slideId: string) => {
-      update((p) => ({
-        ...p,
-        slides: p.slides.filter((s) => s.id !== slideId),
-      }));
+      update((p) => ({ ...p, slides: p.slides.filter((s) => s.id !== slideId) }));
     },
     [update]
   );
@@ -95,10 +96,7 @@ export function usePresentation(initial: Presentation) {
 
   const addElement = useCallback(
     (slideId: string, element: SlideElement) => {
-      updateSlide(slideId, (s) => ({
-        ...s,
-        elements: [...s.elements, element],
-      }));
+      updateSlide(slideId, (s) => ({ ...s, elements: [...s.elements, element] }));
     },
     [updateSlide]
   );
@@ -147,19 +145,74 @@ export function usePresentation(initial: Presentation) {
     [updateSlide]
   );
 
-  // --- Theme ---
+  // --- Theme (with color propagation) ---
 
   const setTheme = useCallback(
-    (theme: Theme) => {
-      update((p) => ({ ...p, theme }));
+    (newTheme: Theme) => {
+      update((p) => {
+        const oldColors: ThemeColors = p.theme.colors;
+        const newColors: ThemeColors = newTheme.colors;
+
+        // Build map: normalized old color → new color
+        const colorMap = new Map<string, string>();
+        (Object.keys(oldColors) as (keyof ThemeColors)[]).forEach((key) => {
+          const oldHex = oldColors[key].toLowerCase();
+          if (oldHex !== newColors[key].toLowerCase()) {
+            colorMap.set(oldHex, newColors[key]);
+          }
+        });
+
+        const mapColor = (c: string): string => colorMap.get(c.toLowerCase()) ?? c;
+
+        // Propagate to all slides
+        const slides = p.slides.map((slide) => {
+          // Update slide background
+          let background = { ...slide.background };
+          if (background.type === 'color' && background.color) {
+            background = { ...background, color: mapColor(background.color) };
+          } else if (background.type === 'gradient' && background.gradient) {
+            background = {
+              ...background,
+              gradient: {
+                ...background.gradient,
+                from: mapColor(background.gradient.from),
+                to: mapColor(background.gradient.to),
+              },
+            };
+          }
+
+          // Update element colors
+          const elements = slide.elements.map((el): SlideElement => {
+            if (el.type === 'text') {
+              const te = el as TextElement;
+              return {
+                ...te,
+                style: { ...te.style, color: mapColor(te.style.color) },
+                background: te.background !== 'transparent' ? mapColor(te.background) : te.background,
+              };
+            }
+            if (el.type === 'shape') {
+              const se = el as ShapeElement;
+              return { ...se, fill: mapColor(se.fill) };
+            }
+            if (el.type === 'icon') {
+              const ie = el as IconElement;
+              return { ...ie, color: mapColor(ie.color) };
+            }
+            return el;
+          });
+
+          return { ...slide, background, elements };
+        });
+
+        return { ...p, theme: newTheme, slides };
+      });
     },
     [update]
   );
 
   const setTitle = useCallback(
-    (title: string) => {
-      update((p) => ({ ...p, title }));
-    },
+    (title: string) => { update((p) => ({ ...p, title })); },
     [update]
   );
 

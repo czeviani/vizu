@@ -1,7 +1,8 @@
 'use client';
-import { use, useEffect, useState, useRef } from 'react';
+import { use, useEffect, useState, useRef, useCallback } from 'react';
+import { v4 as uuid } from 'uuid';
 import { useRouter } from 'next/navigation';
-import type { Presentation, SlideElement, Slide } from '@/types/slide';
+import type { Presentation, SlideElement, Slide, ImageElement } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
 import { storage } from '@/lib/storage';
 import { usePresentation } from '@/hooks/usePresentation';
@@ -10,6 +11,7 @@ import { SlidePanel } from '@/components/editor/SlidePanel';
 import { SlideCanvas } from '@/components/editor/SlideCanvas';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { PreviewModal } from '@/components/editor/PreviewModal';
+import { t } from '@/lib/i18n';
 
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -23,6 +25,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [showPreview, setShowPreview] = useState(false);
   const [zoom, setZoom] = useState(0.7);
   const [saveStatus, setSaveStatus] = useState<'saved' | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -37,39 +40,22 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
   const {
     presentation: pres,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    addSlide,
-    duplicateSlide,
-    removeSlide,
-    moveSlide,
-    updateSlide,
-    addElement,
-    updateElement,
-    removeElement,
-    duplicateElement,
-    setTheme,
-    setTitle,
-    resetPresentation,
+    canUndo, canRedo, undo, redo,
+    addSlide, duplicateSlide, removeSlide, moveSlide,
+    updateSlide, addElement, updateElement, removeElement,
+    duplicateElement, setTheme, setTitle, resetPresentation,
   } = usePresentation(presentation ?? ({} as Presentation));
 
-  // Fix: sync useHistory state when the loaded presentation arrives
   useEffect(() => {
-    if (presentation) {
-      resetPresentation(presentation);
-    }
+    if (presentation) resetPresentation(presentation);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presentation]);
 
-  // Safe derived state — uses optional chaining so it's crash-safe before pres is initialized
   const activeSlide: Slide | null = pres.slides?.[activeIndex] ?? null;
   const selectedElements: SlideElement[] = activeSlide
     ? activeSlide.elements.filter((e) => selectedIds.includes(e.id))
     : [];
 
-  // Persist all state changes (covers undo/redo which bypass the update() path)
   useEffect(() => {
     if (!pres.id || !pres.slides) return;
     storage.set(pres);
@@ -78,7 +64,41 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     saveTimerRef.current = setTimeout(() => setSaveStatus(null), 1500);
   }, [pres]);
 
-  // Keyboard shortcuts — uses refs to avoid stale closures on hot-path handlers
+  // Clipboard paste — handles Ctrl+V image paste
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      if (!activeSlide) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const src = ev.target?.result as string;
+            if (!src) return;
+            const imgEl: ImageElement = {
+              id: uuid(), type: 'image', src, alt: 'Imagem colada',
+              objectFit: 'cover',
+              x: 200, y: 130, width: 400, height: 240,
+              rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+              border: { width: 0, color: '', style: 'none', radius: 0 },
+              shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
+            };
+            addElement(activeSlide.id, imgEl);
+            setSelectedIds([imgEl.id]);
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
+    },
+    [activeSlide, addElement]
+  );
+
+  // Global keyboard shortcuts
   const stateRef = useRef({ activeSlide, selectedIds, pres, duplicateElement, undo, redo });
   stateRef.current = { activeSlide, selectedIds, pres, duplicateElement, undo, redo };
 
@@ -86,7 +106,10 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     const handleKey = (e: KeyboardEvent) => {
       const { activeSlide: slide, selectedIds: ids, pres: p, duplicateElement: dupEl, undo: u, redo: r } = stateRef.current;
       const ctrl = e.ctrlKey || e.metaKey;
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.contentEditable === 'true';
+      const isInput =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable;
 
       if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); u(); }
       if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); r(); }
@@ -105,15 +128,24 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         e.preventDefault();
         if (ids.length === 1 && slide) dupEl(slide.id, ids[0]);
       }
+      if (e.key === 'Escape' && !isInput) {
+        setSelectedIds([]);
+      }
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []); // stable: all mutable state accessed via stateRef
 
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('paste', handlePaste as EventListener);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('paste', handlePaste as EventListener);
+    };
+  }, [handlePaste]); // stable: most state accessed via stateRef
+
+  // Loading / not-found states
   if (!loaded) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
-        Loading…
+        {t.loading}
       </div>
     );
   }
@@ -121,19 +153,18 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   if (notFound) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, background: 'var(--bg)', color: 'var(--text)' }}>
-        <p>Presentation not found.</p>
+        <p>{t.not_found}</p>
         <button onClick={() => router.push('/')} style={{ padding: '8px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-          Go home
+          {t.go_home}
         </button>
       </div>
     );
   }
 
-  // Guard: pres hasn't been synced yet (reset effect fires after render)
   if (!pres.id || !pres.slides) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
-        Loading…
+        {t.loading}
       </div>
     );
   }
@@ -146,29 +177,30 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   return (
     <div
       style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--bg)',
-        color: 'var(--text)',
-        overflow: 'hidden',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        height: '100vh', display: 'flex', flexDirection: 'column',
+        background: 'var(--bg)', color: 'var(--text)',
+        overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
       <Toolbar
         presentation={pres}
         activeSlideId={activeSlide?.id ?? null}
-        selectedIds={selectedIds}
+        selectedElements={selectedElements}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
         onAddElement={(slideId, el) => addElement(slideId, el)}
+        onUpdateElement={(elId, updater) => {
+          if (activeSlide) updateElement(activeSlide.id, elId, updater);
+        }}
         onSetTitle={setTitle}
         onPreview={() => setShowPreview(true)}
         zoom={zoom}
         onZoom={setZoom}
         saveStatus={saveStatus}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((v) => !v)}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -184,13 +216,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
         <div
           style={{
-            flex: 1,
-            overflow: 'auto',
-            background: 'var(--canvas-bg)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: 40,
+            flex: 1, overflow: 'auto', background: 'var(--canvas-bg)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 40,
           }}
         >
           <div
@@ -211,7 +238,11 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
               onUpdateSlide={(updater) => {
                 if (activeSlide) updateSlide(activeSlide.id, updater);
               }}
+              onAddElement={(el) => {
+                if (activeSlide) addElement(activeSlide.id, el);
+              }}
               scale={zoom}
+              showGrid={showGrid}
             />
           </div>
         </div>
@@ -227,12 +258,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             if (activeSlide) updateSlide(activeSlide.id, updater);
           }}
           onSetTheme={setTheme}
-          onDuplicateElement={(elId) => {
-            if (activeSlide) duplicateElement(activeSlide.id, elId);
-          }}
-          onRemoveElement={(elId) => {
-            if (activeSlide) removeElement(activeSlide.id, elId);
-          }}
+          onDuplicateElement={(elId) => { if (activeSlide) duplicateElement(activeSlide.id, elId); }}
+          onRemoveElement={(elId) => { if (activeSlide) removeElement(activeSlide.id, elId); }}
           onBringToFront={(elId) => {
             if (activeSlide) {
               const maxZ = Math.max(0, ...activeSlide.elements.map((e) => e.zIndex));

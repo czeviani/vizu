@@ -153,7 +153,9 @@ Claude Code
 - Drag em elemento: move (coordenadas atualizadas em tempo real)
 - Drag em handle: resize (8 direções, mínimo 8×8px)
 - Double-click em texto: edição inline (contenteditable)
-- Delete/Backspace: remove elementos selecionados (quando foco está no canvas)
+- Delete/Backspace: remove elementos selecionados (quando foco está no canvas, e NÃO em modo de edição de texto)
+- Drag-and-drop de imagem: arrastar arquivo direto no canvas cria ImageElement na posição do drop
+- Ctrl+V: cola imagem da área de transferência como ImageElement
 - Ctrl+Z / Ctrl+Shift+Z: undo / redo
 - Ctrl+`+` / Ctrl+`-` / Ctrl+0: zoom in / out / fit
 
@@ -276,10 +278,11 @@ Cada layout gera elementos com posições fixas em pixels (960×540), cores extr
 **Conversão de coordenadas:** pixels → polegadas via `PX_TO_IN = 10 / 960` (slide é 10in largura no pptx WIDE layout).
 
 **Limitações conhecidas:**
-- Ícones Lucide não exportam (SVG inline sem suporte no PptxGenJS)
 - Tabelas não exportam (não há mapeamento direto)
 - Opacity de shapes não disponível na API PptxGenJS
-- Gradientes de background não exportam
+- Gradientes de background exportam como cor sólida (from color)
+
+**Ícones no PPTX:** exportados via SVG→PNG offscreen canvas (`iconToDataUrl()` em `iconPaths.ts`). Compatível com PowerPoint 2016+ e 365.
 
 ### 4.9 Persistência
 
@@ -430,6 +433,19 @@ curl -s -X POST https://vizu-czeviani.vercel.app/api/ai/modify \
 - `colorToHex(color)`: converte cores (hex strip `#`, mapa de named colors)
 - Retorno: `Promise<Blob>` do arquivo `.pptx`
 
+### iconToDataUrl(iconName, color, sizePx?) — `lib/iconPaths.ts`
+- Converte ícone Lucide (identificado por nome) para PNG data URL via canvas offscreen
+- Retorna `Promise<string | null>` — null se ícone não encontrado ou ambiente server-side
+- Usado por `pptxExport.ts` para exportar ícones no .pptx com qualidade nítida
+
+### ICON_PATHS / ICON_NAMES — `lib/iconPaths.ts`
+- Mapa completo de SVG paths dos 48 ícones disponíveis
+- Compartilhado entre Toolbar (preview) e pptxExport (PNG conversion)
+
+### t — `lib/i18n.ts`
+- Objeto de constantes com todas as strings visíveis em PT-BR
+- Importar via `import { t } from '@/lib/i18n'`
+
 ### storage — `lib/storage.ts`
 - `list()`: retorna `Presentation[]` ordenada por `updatedAt` desc
 - `get(id)`: retorna `Presentation | null`
@@ -535,3 +551,13 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
 - [2026-06-20] Fix: undo/redo agora persiste no localStorage; PPTX exporta com LAYOUT_16x9 (escala correta)
 - [2026-06-20] Toolbar: botão Image, indicador "✓ Saved"; PropertiesPanel: props de imagem, botões Front/Back/Duplicate/Delete
 - [2026-06-20] Shortcuts: Ctrl+S (salvar), Ctrl+D (duplicar elemento)
+- [2026-06-20] **Sessão de refatoração completa:**
+  - **Bug 4 fix:** Delete/Backspace em modo de edição de texto não apaga mais o elemento — adicionado check `isContentEditable` no handler de teclado do SlideCanvas
+  - **Bug 6 fix (crítico):** Letras desordenadas durante digitação resolvido — TextEl agora usa `useEffect` para inicializar o DOM ao entrar no modo de edição, sem fornecer content React controlled durante a sessão, eliminando conflito React/contentEditable
+  - **Bug 1 (imagem drag-drop):** Canvas aceita drag-and-drop de arquivos de imagem com `onDragOver`/`onDrop`, cria ImageElement com coordenadas do drop point; Toolbar tem menu de inserção de imagem com upload de arquivo e URL; Ctrl+V no editor cola imagem da área de transferência
+  - **Bug 5 (tema/cor):** `setTheme` em `usePresentation.ts` agora propaga cores do tema antigo→novo em todos os slides (background, text elements, shapes, icons) via mapeamento de cores
+  - **Bug 2 (tradução):** Interface completa em Português Brasileiro via `src/lib/i18n.ts` — todos os labels, botões, tooltips, placeholders, mensagens de estado vazio, toasts
+  - **Bug 3 (UX):** Toolbar contextual ao selecionar elemento (barra secundária abaixo do toolbar principal) com controles inline de fonte/cor/alinhamento para texto, fill/opacidade para shapes, fit/opacidade para imagens, cor para ícones; toggle de grade visual no canvas; snap lines de alinhamento ao arrastar elementos (threshold 8px, compara left/right/center de todos os elementos)
+  - **Icon PPTX export:** Ícones Lucide agora exportam corretamente no .pptx — `iconToDataUrl()` em `iconPaths.ts` converte SVG path para PNG via canvas offscreen (200×200px); `pptxExport.ts` chama esta função async para cada `IconElement`
+  - **Novos arquivos:** `src/lib/i18n.ts`, `src/lib/iconPaths.ts`, `src/components/editor/ContextToolbar.tsx`
+  - **ImageEl:** Placeholder atualizado com instrução de upload; aceita imagens via data URL (localStorage-friendly)

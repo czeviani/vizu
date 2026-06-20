@@ -8,6 +8,12 @@ import { IconEl } from './elements/IconEl';
 import { TableEl } from './elements/TableEl';
 
 const HANDLE_SIZE = 8;
+const SNAP_THRESHOLD = 8; // px
+
+interface SnapLine {
+  type: 'h' | 'v';
+  pos: number;
+}
 
 interface Props {
   element: SlideElement;
@@ -16,6 +22,10 @@ interface Props {
   onSelect: (e: React.MouseEvent) => void;
   onUpdate: (props: Partial<SlideElement>) => void;
   onUpdateText?: (content: string) => void;
+  /** Other elements in the slide for snap-guide computation */
+  otherElements?: SlideElement[];
+  onSnapLines?: (lines: SnapLine[]) => void;
+  onEditingChange?: (editing: boolean) => void;
 }
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -31,7 +41,78 @@ const handles: { id: ResizeHandle; cursor: string; style: React.CSSProperties }[
   { id: 'w', cursor: 'w-resize', style: { top: '50%', left: -4, transform: 'translateY(-50%)' } },
 ];
 
-export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate, onUpdateText }: Props) {
+function computeSnap(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  others: SlideElement[]
+): { x: number; y: number; lines: SnapLine[] } {
+  let bestX = x, bestDX = SNAP_THRESHOLD + 1;
+  let bestY = y, bestDY = SNAP_THRESHOLD + 1;
+  const vLines: number[] = [];
+  const hLines: number[] = [];
+
+  for (const o of others) {
+    const oL = o.x, oR = o.x + o.width, oCX = o.x + o.width / 2;
+    const oT = o.y, oB = o.y + o.height, oCY = o.y + o.height / 2;
+
+    const xCandidates: [number, number, number][] = [
+      [x, oL, oL], [x + w, oR, oR], [x + w / 2, oCX, oCX],
+      [x, oR, oR], [x + w, oL, oL],
+    ];
+    for (const [elPt, oPt, line] of xCandidates) {
+      const d = Math.abs(elPt - oPt);
+      if (d < bestDX) {
+        bestDX = d;
+        bestX = x + (oPt - elPt);
+        vLines.length = 0;
+        vLines.push(line);
+      } else if (d === bestDX && bestDX < SNAP_THRESHOLD) {
+        vLines.push(line);
+      }
+    }
+
+    const yCandidates: [number, number, number][] = [
+      [y, oT, oT], [y + h, oB, oB], [y + h / 2, oCY, oCY],
+      [y, oB, oB], [y + h, oT, oT],
+    ];
+    for (const [elPt, oPt, line] of yCandidates) {
+      const d = Math.abs(elPt - oPt);
+      if (d < bestDY) {
+        bestDY = d;
+        bestY = y + (oPt - elPt);
+        hLines.length = 0;
+        hLines.push(line);
+      } else if (d === bestDY && bestDY < SNAP_THRESHOLD) {
+        hLines.push(line);
+      }
+    }
+  }
+
+  const lines: SnapLine[] = [
+    ...(bestDX <= SNAP_THRESHOLD ? vLines.map((pos) => ({ type: 'v' as const, pos })) : []),
+    ...(bestDY <= SNAP_THRESHOLD ? hLines.map((pos) => ({ type: 'h' as const, pos })) : []),
+  ];
+
+  return {
+    x: bestDX <= SNAP_THRESHOLD ? bestX : x,
+    y: bestDY <= SNAP_THRESHOLD ? bestY : y,
+    lines,
+  };
+}
+
+export function CanvasElement({
+  element: el,
+  selected,
+  scale,
+  onSelect,
+  onUpdate,
+  onUpdateText,
+  otherElements,
+  onSnapLines,
+  onEditingChange,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const dragStart = useRef<{ mx: number; my: number; ex: number; ey: number } | null>(null);
   const resizeStart = useRef<{
@@ -39,6 +120,14 @@ export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate
     x: number; y: number; w: number; h: number;
     handle: ResizeHandle;
   } | null>(null);
+
+  const setEditingState = useCallback(
+    (v: boolean) => {
+      setEditing(v);
+      onEditingChange?.(v);
+    },
+    [onEditingChange]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -53,11 +142,22 @@ export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate
         if (!dragStart.current) return;
         const dx = (ev.clientX - dragStart.current.mx) / scale;
         const dy = (ev.clientY - dragStart.current.my) / scale;
-        onUpdate({ x: dragStart.current.ex + dx, y: dragStart.current.ey + dy });
+        let nx = dragStart.current.ex + dx;
+        let ny = dragStart.current.ey + dy;
+
+        if (otherElements && otherElements.length > 0) {
+          const snapped = computeSnap(nx, ny, el.width, el.height, otherElements);
+          nx = snapped.x;
+          ny = snapped.y;
+          onSnapLines?.(snapped.lines);
+        }
+
+        onUpdate({ x: nx, y: ny });
       };
 
       const onUp = () => {
         dragStart.current = null;
+        onSnapLines?.([]);
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
       };
@@ -65,19 +165,15 @@ export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     },
-    [el, editing, scale, onSelect, onUpdate]
+    [el, editing, scale, onSelect, onUpdate, otherElements, onSnapLines]
   );
 
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent, handle: ResizeHandle) => {
       e.stopPropagation();
       resizeStart.current = {
-        mx: e.clientX,
-        my: e.clientY,
-        x: el.x,
-        y: el.y,
-        w: el.width,
-        h: el.height,
+        mx: e.clientX, my: e.clientY,
+        x: el.x, y: el.y, w: el.width, h: el.height,
         handle,
       };
 
@@ -111,14 +207,14 @@ export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (el.type === 'text') setEditing(true);
+      if (el.type === 'text') setEditingState(true);
     },
-    [el.type]
+    [el.type, setEditingState]
   );
 
   const handleBlur = useCallback(() => {
-    setEditing(false);
-  }, []);
+    setEditingState(false);
+  }, [setEditingState]);
 
   return (
     <div
@@ -147,8 +243,9 @@ export function CanvasElement({ element: el, selected, scale, onSelect, onUpdate
           element={el as TextElement}
           selected={selected}
           editing={editing}
-          onStartEdit={() => setEditing(true)}
+          onStartEdit={() => setEditingState(true)}
           onChange={(content) => onUpdateText?.(content)}
+          onExitEdit={() => setEditingState(false)}
         />
       )}
       {el.type === 'shape' && <ShapeEl element={el as never} />}

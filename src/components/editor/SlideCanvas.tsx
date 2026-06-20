@@ -1,8 +1,15 @@
 'use client';
-import { useCallback, useRef, useState, useEffect } from 'react';
-import type { Slide, SlideElement, Presentation } from '@/types/slide';
+import { useCallback, useRef, useState } from 'react';
+import { v4 as uuid } from 'uuid';
+import type { Slide, SlideElement, ImageElement, Presentation } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
 import { CanvasElement } from './CanvasElement';
+import { t } from '@/lib/i18n';
+
+interface SnapLine {
+  type: 'h' | 'v';
+  pos: number;
+}
 
 interface Props {
   slide: Slide | null;
@@ -11,7 +18,9 @@ interface Props {
   onSelectIds: (ids: string[]) => void;
   onUpdateElement: (elementId: string, updater: (e: SlideElement) => SlideElement) => void;
   onUpdateSlide: (updater: (s: Slide) => Slide) => void;
+  onAddElement?: (el: SlideElement) => void;
   scale: number;
+  showGrid?: boolean;
 }
 
 export function SlideCanvas({
@@ -21,11 +30,16 @@ export function SlideCanvas({
   onSelectIds,
   onUpdateElement,
   onUpdateSlide,
+  onAddElement,
   scale,
+  showGrid = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const selectionRef = useRef<{ sx: number; sy: number } | null>(null);
   const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [snapLines, setSnapLines] = useState<SnapLine[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const editingElementsRef = useRef<Set<string>>(new Set());
 
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -54,14 +68,12 @@ export function SlideCanvas({
         if (selectionBox && slide) {
           const box = selectionBox;
           const hits = slide.elements
-            .filter((el) => {
-              return (
-                el.x < box.x + box.w &&
-                el.x + el.width > box.x &&
-                el.y < box.y + box.h &&
-                el.y + el.height > box.y
-              );
-            })
+            .filter((el) =>
+              el.x < box.x + box.w &&
+              el.x + el.width > box.x &&
+              el.y < box.y + box.h &&
+              el.y + el.height > box.y
+            )
             .map((e) => e.id);
           if (hits.length > 0) onSelectIds(hits);
         }
@@ -77,25 +89,83 @@ export function SlideCanvas({
     [scale, onSelectIds, slide, selectionBox]
   );
 
-  // Keyboard delete
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
+  // Delete/Backspace: only when NOT in a text-editing context
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
       if (!slide || selectedIds.length === 0) return;
-      if (['Delete', 'Backspace'].includes(e.key) && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
-        // Only delete if target is canvas area
-        if (document.activeElement === document.body || containerRef.current?.contains(document.activeElement)) {
-          onUpdateSlide((s) => ({
-            ...s,
-            elements: s.elements.filter((el) => !selectedIds.includes(el.id)),
-          }));
-          onSelectIds([]);
-        }
+      const isEditable =
+        (e.target as HTMLElement)?.isContentEditable ||
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement;
+      if (['Delete', 'Backspace'].includes(e.key) && !isEditable) {
+        onUpdateSlide((s) => ({
+          ...s,
+          elements: s.elements.filter((el) => !selectedIds.includes(el.id)),
+        }));
+        onSelectIds([]);
       }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [slide, selectedIds, onUpdateSlide, onSelectIds]);
+    },
+    [slide, selectedIds, onUpdateSlide, onSelectIds]
+  );
 
+  // ── Image drag-drop ──────────────────────────────────────────────────────────
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    const hasFiles = Array.from(e.dataTransfer.types).includes('Files');
+    if (!hasFiles) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+
+      const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
+      if (!file || !containerRef.current) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropX = Math.max(0, (e.clientX - rect.left) / scale);
+      const dropY = Math.max(0, (e.clientY - rect.top) / scale);
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const src = ev.target?.result as string;
+        if (!src) return;
+        const imgEl: ImageElement = {
+          id: uuid(),
+          type: 'image',
+          src,
+          alt: file.name,
+          objectFit: 'cover',
+          x: Math.max(0, dropX - 200),
+          y: Math.max(0, dropY - 120),
+          width: 400,
+          height: 240,
+          rotation: 0,
+          opacity: 1,
+          zIndex: 10,
+          locked: false,
+          visible: true,
+          border: { width: 0, color: '', style: 'none', radius: 0 },
+          shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
+        };
+        onAddElement?.(imgEl);
+        onSelectIds([imgEl.id]);
+      };
+      reader.readAsDataURL(file);
+    },
+    [scale, onAddElement, onSelectIds]
+  );
+
+  // ── Background ───────────────────────────────────────────────────────────────
   const bg = slide?.background;
   let backgroundStyle: React.CSSProperties = {};
   if (bg?.type === 'color') {
@@ -116,20 +186,40 @@ export function SlideCanvas({
     ? [...slide.elements].filter((e) => e.visible).sort((a, b) => a.zIndex - b.zIndex)
     : [];
 
+  // Grid overlay (20px grid)
+  const gridStyle: React.CSSProperties = showGrid
+    ? {
+        backgroundImage: `
+          linear-gradient(to right, rgba(100,116,139,0.15) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(100,116,139,0.15) 1px, transparent 1px)
+        `,
+        backgroundSize: '40px 40px',
+      }
+    : {};
+
   return (
     <div
       ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       style={{
         position: 'relative',
         width: SLIDE_WIDTH,
         height: SLIDE_HEIGHT,
         ...backgroundStyle,
+        ...gridStyle,
         overflow: 'hidden',
         boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
         borderRadius: 2,
         flexShrink: 0,
+        outline: 'none',
+        border: isDragOver ? '2.5px dashed #3b82f6' : '2.5px solid transparent',
+        transition: 'border-color 0.15s',
       }}
       onMouseDown={handleCanvasMouseDown}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {!slide && (
         <div
@@ -143,7 +233,35 @@ export function SlideCanvas({
             fontSize: 18,
           }}
         >
-          Select a slide
+          {t.canvas_no_slide}
+        </div>
+      )}
+
+      {isDragOver && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(59,130,246,0.08)',
+            zIndex: 10000,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              background: 'rgba(59,130,246,0.9)',
+              color: '#fff',
+              padding: '12px 24px',
+              borderRadius: 10,
+              fontSize: 16,
+              fontWeight: 600,
+            }}
+          >
+            {t.img_drop}
+          </div>
         </div>
       )}
 
@@ -153,6 +271,12 @@ export function SlideCanvas({
           element={el}
           selected={selectedIds.includes(el.id)}
           scale={scale}
+          otherElements={sorted.filter((e) => e.id !== el.id)}
+          onSnapLines={setSnapLines}
+          onEditingChange={(editing) => {
+            if (editing) editingElementsRef.current.add(el.id);
+            else editingElementsRef.current.delete(el.id);
+          }}
           onSelect={(e) => {
             if (e.shiftKey) {
               onSelectIds(
@@ -173,6 +297,40 @@ export function SlideCanvas({
         />
       ))}
 
+      {/* Snap lines */}
+      {snapLines.map((line, i) =>
+        line.type === 'v' ? (
+          <div
+            key={`v-${i}`}
+            style={{
+              position: 'absolute',
+              left: line.pos,
+              top: 0,
+              width: 1,
+              height: '100%',
+              background: '#3b82f6',
+              pointerEvents: 'none',
+              zIndex: 9998,
+            }}
+          />
+        ) : (
+          <div
+            key={`h-${i}`}
+            style={{
+              position: 'absolute',
+              top: line.pos,
+              left: 0,
+              height: 1,
+              width: '100%',
+              background: '#3b82f6',
+              pointerEvents: 'none',
+              zIndex: 9998,
+            }}
+          />
+        )
+      )}
+
+      {/* Selection rectangle */}
       {selectionBox && (
         <div
           style={{
