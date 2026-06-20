@@ -531,3 +531,7 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
 - [2026-06-13] API IA: /api/ai/create e /api/ai/modify
 - [2026-06-13] Deploy: czeviani/vizu no GitHub + vizu-czeviani.vercel.app (auto-deploy no push main)
 - [2026-06-13] vizu.md criado como fonte única de verdade técnica
+- [2026-06-20] Fix crítico: editor crashava ao abrir qualquer apresentação (useHistory.reset() para sincronizar estado após carga assíncrona)
+- [2026-06-20] Fix: undo/redo agora persiste no localStorage; PPTX exporta com LAYOUT_16x9 (escala correta)
+- [2026-06-20] Toolbar: botão Image, indicador "✓ Saved"; PropertiesPanel: props de imagem, botões Front/Back/Duplicate/Delete
+- [2026-06-20] Shortcuts: Ctrl+S (salvar), Ctrl+D (duplicar elemento)
