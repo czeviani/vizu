@@ -12,6 +12,8 @@ interface Props {
   onDuplicateSlide: (slideId: string) => void;
   onRemoveSlide: (slideId: string) => void;
   onMoveSlide: (slideId: string, toIndex: number) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const LAYOUTS: { id: LayoutType; label: string; icon: string }[] = [
@@ -32,6 +34,8 @@ export function SlidePanel({
   onDuplicateSlide,
   onRemoveSlide,
   onMoveSlide,
+  collapsed,
+  onToggleCollapse,
 }: Props) {
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ slideId: string; x: number; y: number } | null>(null);
@@ -60,6 +64,47 @@ export function SlidePanel({
     },
     [dragging, onMoveSlide]
   );
+
+  /* ── Collapsed state — faixa estreita ────────────────── */
+  if (collapsed) {
+    return (
+      <aside style={{
+        width: 36,
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 8,
+        overflow: 'hidden',
+      }}>
+        <button
+          onClick={onToggleCollapse}
+          title="Expandir painel de slides"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--text-3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            borderRadius: 'var(--r-xs)',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+            style={{ transform: 'rotate(180deg)', transition: 'transform 0.22s', flexShrink: 0 }}>
+            <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>
+          </svg>
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside style={{
@@ -276,8 +321,9 @@ export function SlidePanel({
         })}
       </div>
 
-      {/* Footer — add slide button */}
-      <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)' }}>
+      {/* Footer — add slide button + collapse */}
+      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* Botão dashed de adicionar slide */}
         <button
           onClick={() => setShowLayoutPicker((v) => !v)}
           style={{
@@ -312,6 +358,37 @@ export function SlidePanel({
             <path d="M12 5v14M5 12h14"/>
           </svg>
           Adicionar slide
+        </button>
+
+        {/* Botão de colapso */}
+        <button
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Expandir painel de slides' : 'Recolher painel de slides'}
+          style={{
+            width: '100%',
+            padding: '5px 8px',
+            background: 'transparent',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-sm)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            gap: 6,
+            color: 'var(--text-3)',
+            fontSize: 11,
+            fontWeight: 500,
+            fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+            style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s', flexShrink: 0 }}>
+            <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>
+          </svg>
+          {!collapsed && 'Recolher painel'}
         </button>
       </div>
 

@@ -435,10 +435,10 @@ export default function HomePage() {
   );
 
   const navItems = [
-    { icon: <IcoPresentation />, label: 'Apresentações', active: true, badge: presentations.length > 0 ? presentations.length : null },
-    { icon: <IcoLayout />, label: 'Templates', active: false, badge: null },
-    { icon: <IcoDownload />, label: 'Exportações', active: false, badge: null },
-    { icon: <IcoSettings />, label: 'Configurações', active: false, badge: null },
+    { icon: <IcoPresentation />, label: 'Apresentações', active: true, badge: presentations.length > 0 ? presentations.length : null, route: null },
+    { icon: <IcoLayout />, label: 'Templates', active: false, badge: null, route: '/templates' },
+    { icon: <IcoDownload />, label: 'Exportações', active: false, badge: null, route: '/templates' },
+    { icon: <IcoSettings />, label: 'Configurações', active: false, badge: null, route: '/configuracoes' },
   ];
 
   return (
@@ -518,10 +518,12 @@ export default function HomePage() {
               key={item.label}
               title={sidebarCollapsed ? item.label : undefined}
               className={`nav-item${item.active ? ' active' : ''}`}
+              onClick={() => item.route && router.push(item.route)}
               style={{
                 marginBottom: 2,
                 justifyContent: sidebarCollapsed ? 'center' : undefined,
                 padding: sidebarCollapsed ? '9px 8px' : undefined,
+                cursor: item.route ? 'pointer' : 'default',
               }}
             >
               <span style={{ color: item.active ? 'var(--sidebar-accent)' : 'var(--sidebar-text)', flexShrink: 0 }}>

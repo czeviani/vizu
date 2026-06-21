@@ -1,9 +1,9 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useRouter } from 'next/navigation';
 import type { Presentation, SlideElement, TextElement, ShapeElement, IconElement, ImageElement } from '@/types/slide';
-import { exportToPptx } from '@/lib/pptxExport';
+import { ExportModal } from './ExportModal';
 import { ICON_NAMES, ICON_PATHS } from '@/lib/iconPaths';
 import { t } from '@/lib/i18n';
 import { ContextToolbar } from './ContextToolbar';
@@ -18,6 +18,8 @@ interface Props {
   onRedo: () => void;
   onAddElement: (slideId: string, el: SlideElement) => void;
   onUpdateElement: (id: string, updater: (e: SlideElement) => SlideElement) => void;
+  onRemoveElement?: (id: string) => void;
+  onDuplicateElement?: (id: string) => void;
   onSetTitle: (title: string) => void;
   onPreview: () => void;
   zoom: number;
@@ -197,6 +199,8 @@ export function Toolbar({
   onRedo,
   onAddElement,
   onUpdateElement,
+  onRemoveElement,
+  onDuplicateElement,
   onSetTitle,
   onPreview,
   zoom,
@@ -208,10 +212,11 @@ export function Toolbar({
   const router = useRouter();
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
-  const [exporting, setExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [showImageMenu, setShowImageMenu] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState('');
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const add = useCallback(
@@ -286,22 +291,40 @@ export function Toolbar({
     setIconSearch('');
   };
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const blob = await exportToPptx(presentation);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${presentation.title.replace(/\s+/g, '_')}.pptx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert('Falha ao exportar. Verifique o console para detalhes.');
-    }
-    setExporting(false);
-  };
+  /* ── Keyboard shortcuts ────────────────────────────────────── */
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // Guard: não ativar se foco em input/textarea/contenteditable
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return;
+
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowShortcuts(true);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
+        e.preventDefault();
+        setShowExportModal(true);
+        return;
+      }
+
+      if (!activeSlideId) return; // não inserir sem slide ativo
+
+      // T e R são tratados no editor page (page.tsx) para evitar duplicação
+      if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        setShowIconPicker((v) => !v);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        setShowImageMenu((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSlideId, onAddElement]);
 
   const filteredIcons = ICON_NAMES.filter((n) => n.toLowerCase().includes(iconSearch.toLowerCase()));
   const hasSelection = selectedElements.length > 0;
@@ -441,16 +464,18 @@ export function Toolbar({
         <Sep />
 
         {/* Insert: Text */}
-        <ToolBtn title={t.toolbar_text} onClick={addText} disabled={!activeSlideId}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
-          </svg>
-          Texto
-        </ToolBtn>
+        <div style={!activeSlideId ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}>
+          <ToolBtn title="Texto [T]" onClick={addText} disabled={!activeSlideId}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+            </svg>
+            Texto
+          </ToolBtn>
+        </div>
 
         {/* Insert: Image */}
-        <div style={{ position: 'relative' }}>
-          <ToolBtn title={t.toolbar_image} onClick={() => setShowImageMenu((v) => !v)} disabled={!activeSlideId}>
+        <div style={{ position: 'relative', ...(!activeSlideId ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
+          <ToolBtn title="Imagem [M]" onClick={() => setShowImageMenu((v) => !v)} disabled={!activeSlideId}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -512,11 +537,13 @@ export function Toolbar({
         </div>
 
         {/* Insert: Shape */}
-        <ShapeMenu onAddShape={addShape} disabled={!activeSlideId} />
+        <div style={!activeSlideId ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}>
+          <ShapeMenu onAddShape={addShape} disabled={!activeSlideId} />
+        </div>
 
         {/* Insert: Icon */}
-        <div style={{ position: 'relative' }}>
-          <ToolBtn title={t.toolbar_icon} onClick={() => setShowIconPicker((v) => !v)} disabled={!activeSlideId}>
+        <div style={{ position: 'relative', ...(!activeSlideId ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}) }}>
+          <ToolBtn title="Ícone [I]" onClick={() => setShowIconPicker((v) => !v)} disabled={!activeSlideId}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
@@ -586,7 +613,7 @@ export function Toolbar({
         <Sep />
 
         {/* Grid toggle */}
-        <ToolBtn title={t.toolbar_grid} onClick={onToggleGrid} active={showGrid}>
+        <ToolBtn title="Grade [Ctrl+G]" onClick={onToggleGrid} active={showGrid}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
             <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
@@ -636,7 +663,7 @@ export function Toolbar({
         <Sep />
 
         {/* Preview */}
-        <ToolBtn title={`${t.toolbar_preview} (F5)`} onClick={onPreview}>
+        <ToolBtn title="Visualizar [F5]" onClick={onPreview}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M5 3H3v4M21 3h-2v4M5 21H3v-4M21 21h-2v-4"/>
             <rect x="7" y="7" width="10" height="10" rx="1"/>
@@ -646,15 +673,33 @@ export function Toolbar({
 
         {/* Export */}
         <button
-          onClick={handleExport}
-          disabled={exporting}
+          onClick={() => setShowExportModal(true)}
+          title="Exportar [Ctrl+Shift+E]"
           className="btn btn-primary"
           style={{ marginLeft: 4, padding: '7px 14px', fontSize: 12.5 }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
           </svg>
-          {exporting ? 'Exportando…' : 'Exportar .pptx'}
+          Exportar
+        </button>
+        {showExportModal && (
+          <ExportModal
+            presentation={presentation}
+            onClose={() => setShowExportModal(false)}
+          />
+        )}
+
+        {/* Shortcuts help button */}
+        <button
+          onClick={() => setShowShortcuts(true)}
+          title="Atalhos de teclado [F1]"
+          className="tool-btn"
+          style={{ marginLeft: 4 }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
+          </svg>
         </button>
 
         {/* Theme toggle */}
@@ -664,17 +709,20 @@ export function Toolbar({
       </div>
 
       {/* ── Context toolbar row ──────────────────────────── */}
-      {hasSelection && (
-        <div style={{
-          height: 42,
-          borderTop: '1px solid var(--border)',
-          background: 'var(--surface-2)',
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          <ContextToolbar elements={selectedElements} onUpdateElement={onUpdateElement} />
-        </div>
-      )}
+      <div style={{
+        height: 42,
+        borderTop: '1px solid var(--border)',
+        background: 'var(--surface-2)',
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        <ContextToolbar
+          elements={selectedElements}
+          onUpdateElement={onUpdateElement}
+          onRemoveElement={onRemoveElement}
+          onDuplicateElement={onDuplicateElement}
+        />
+      </div>
 
       {/* Hidden file input */}
       <input
@@ -684,6 +732,101 @@ export function Toolbar({
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
+
+      {/* ── Keyboard shortcuts modal ──────────────────────── */}
+      {showShortcuts && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowShortcuts(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-md)',
+              padding: 24,
+              maxWidth: 560,
+              width: '90vw',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: 'var(--shadow-lg)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Atalhos de Teclado</h2>
+              <button
+                onClick={() => setShowShortcuts(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {[
+              {
+                grupo: 'Inserção de Elementos',
+                atalhos: [
+                  ['T', 'Inserir texto'],
+                  ['R', 'Inserir retângulo'],
+                  ['M', 'Inserir imagem'],
+                  ['I', 'Inserir ícone'],
+                ],
+              },
+              {
+                grupo: 'Edição',
+                atalhos: [
+                  ['Ctrl+Z', 'Desfazer'],
+                  ['Ctrl+Shift+Z', 'Refazer'],
+                  ['Ctrl+D', 'Duplicar elemento'],
+                  ['Ctrl+A', 'Selecionar tudo'],
+                  ['Del / Backspace', 'Excluir elemento'],
+                  ['↑↓←→', 'Mover 1px'],
+                  ['Shift+↑↓←→', 'Mover 10px'],
+                ],
+              },
+              {
+                grupo: 'Zoom e Visualização',
+                atalhos: [
+                  ['Ctrl+=', 'Zoom +10%'],
+                  ['Ctrl+-', 'Zoom -10%'],
+                  ['Ctrl+0', 'Zoom para 70%'],
+                  ['Ctrl+G', 'Toggle grade'],
+                  ['F5', 'Visualizar em tela cheia'],
+                  ['Ctrl+Shift+E', 'Abrir modal de exportação'],
+                ],
+              },
+              {
+                grupo: 'Arquivo',
+                atalhos: [
+                  ['Ctrl+S', 'Salvar agora'],
+                  ['F1', 'Mostrar atalhos'],
+                  ['Escape', 'Desselecionar / Sair de edição'],
+                ],
+              },
+            ].map(({ grupo, atalhos }) => (
+              <div key={grupo} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  {grupo}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {atalhos.map(([key, desc]) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{desc}</span>
+                      <kbd style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                        {key}
+                      </kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

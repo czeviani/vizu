@@ -42,9 +42,14 @@ src/
   lib/
     themes.ts          ← 6 temas predefinidos + getThemeById
     templates.ts       ← buildSlideFromSpec + createSlideFromLayout (7 layouts)
+    templateLibrary.ts ← VisuTemplate, 12 templates built-in, CRUD localStorage
     pptxExport.ts      ← exportToPptx (PptxGenJS)
-    storage.ts         ← localStorage CRUD (list, get, set, delete)
+    exportUtils.ts     ← exportAsPptx, exportAsPdf, exportAsPng, ExportRecord history
+    settingsStorage.ts ← VisuSettings, getSettings, saveSettings, updateSetting
+    storage.ts         ← localStorage CRUD presentations (list, get, set, delete)
     supabase.ts        ← cliente Supabase (opcional, futuro)
+    i18n.ts            ← strings PT-BR
+    iconPaths.ts       ← SVG paths dos 48 ícones Lucide
   hooks/
     useHistory.ts      ← undo/redo (100 estados)
     usePresentation.ts ← operações de apresentação (add/remove/update slides e elementos)
@@ -55,11 +60,16 @@ src/
       SlideCanvas.tsx     ← canvas principal (box-select, teclado)
       SlidePanel.tsx      ← painel lateral de slides (miniaturas, drag-and-drop)
       SlideMiniature.tsx  ← miniatura CSS-rendered de um slide
-      Toolbar.tsx         ← barra superior (ferramentas, zoom, export)
+      Toolbar.tsx         ← barra superior (ferramentas, zoom, "Exportar" abre ExportModal)
       PropertiesPanel.tsx ← painel direito (tabs: Element/Slide/Theme)
       PreviewModal.tsx    ← fullscreen preview com navegação
+      ContextToolbar.tsx  ← barra contextual (42px, controles por tipo de elemento)
+      ContextMenu.tsx     ← menu de contexto (click direito no canvas)
+      ExportModal.tsx     ← modal multi-formato (PPTX/PDF/PNG + histórico)
   app/
-    page.tsx           ← home (galeria de apresentações)
+    page.tsx           ← home (galeria de apresentações + sidebar com nav)
+    templates/page.tsx ← galeria de templates (12 built-in + user-created)
+    configuracoes/page.tsx ← configurações do usuário (aparência, editor, conta)
     editor/[id]/page.tsx ← editor principal
     api/
       presentations/route.ts  ← CRUD REST
@@ -674,3 +684,9 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
   - `PropertiesPanel.tsx`: tabs Elemento/Slide/Tema, sections colapsáveis, `ColorSwatch`, `NumInput`, `ThemeProperties` com preview cards
   - `ContextToolbar.tsx`: variáveis CSS renomeadas (`--accent-soft` em vez de `--accent-subtle`, `--text-3` em vez de `--text-secondary`); aliases de compat em `globals.css`
   - Design decisions documentadas em §9
+- [2026-06-21] **Módulos Templates, Exportação e Configurações (V3):**
+  - **Templates** (`/templates`): galeria com 12 templates built-in (4 categorias × 3, 53 slides reais via `buildSlideFromSpec`); filtro por categoria como pills; busca com debounce 300ms; cards 16:9 com `SlideMiniature`; modal de preview com carousel e teclado ←/→; "Usar template" cria nova apresentação e abre no editor; `lib/templateLibrary.ts` com `VisuTemplate`, `BUILT_IN_TEMPLATES`, `getAllTemplates`, `createPresentationFromTemplate`; user-created templates em `localStorage['vizu_templates']`
+  - **Exportação** (`ExportModal`): modal 3 abas PPTX/PDF/PNG acessível pelo botão "Exportar" do Toolbar; PPTX via `exportToPptx` existente; PDF via `html-to-image` → `jsPDF` (orientação paisagem 720×405pt); PNG por slide com pixelRatio configurável (1x/1.5x/2x); seleção de range de slides; progresso animado; histórico de exportações em `localStorage['vizu-export-history']`; atalho `Ctrl+Shift+E`; `lib/exportUtils.ts` + `components/editor/ExportModal.tsx`; `jspdf` adicionado como dependência
+  - **Configurações** (`/configuracoes`): página dedicada com sidebar idêntica à home; 5 seções (Aparência, Editor, Nova Apresentação, Atalhos, Conta); tema muda imediatamente; autosave, grade, snap, guias, unidade, tamanho padrão, tema padrão; tabela de 16 atalhos de teclado; exportar todos os dados como JSON; limpar apresentações (2 cliques); `lib/settingsStorage.ts` com `VisuSettings`, `getSettings`, `saveSettings`, `updateSetting`
+  - **Integração home**: navItems de Templates e Configurações agora têm `onClick` com `router.push` para `/templates` e `/configuracoes`
+  - **Novos arquivos**: `src/lib/templateLibrary.ts`, `src/lib/exportUtils.ts`, `src/lib/settingsStorage.ts`, `src/components/editor/ExportModal.tsx`, `src/app/templates/page.tsx`, `src/app/configuracoes/page.tsx`

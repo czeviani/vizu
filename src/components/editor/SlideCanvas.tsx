@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import type { Slide, SlideElement, ImageElement, Presentation } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
@@ -21,6 +21,7 @@ interface Props {
   onAddElement?: (el: SlideElement) => void;
   scale: number;
   showGrid?: boolean;
+  onContextMenu?: (e: React.MouseEvent, clickedElementId: string | null) => void;
 }
 
 export function SlideCanvas({
@@ -33,6 +34,7 @@ export function SlideCanvas({
   onAddElement,
   scale,
   showGrid = false,
+  onContextMenu,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const selectionRef = useRef<{ sx: number; sy: number } | null>(null);
@@ -41,9 +43,72 @@ export function SlideCanvas({
   const [isDragOver, setIsDragOver] = useState(false);
   const editingElementsRef = useRef<Set<string>>(new Set());
 
+  // ── Pan via Espaço + drag ────────────────────────────────────────────────────
+  const [isPanning, setIsPanning] = useState(false);
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number; scrollX: number; scrollY: number } | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        const target = e.target as HTMLElement;
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return;
+        e.preventDefault();
+        setIsSpaceDown(true);
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpaceDown(false);
+        setIsPanning(false);
+        setPanStart(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
+  // ── Escape com dupla função ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+
+      // Primeiro Escape: sair de edição de texto inline
+      const editingEl = document.querySelector('[contenteditable="true"]');
+      if (editingEl) {
+        (editingEl as HTMLElement).blur();
+        return;
+      }
+      // Segundo Escape: desselecionar
+      onSelectIds([]);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onSelectIds]);
+
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.target !== containerRef.current) return;
+      // Se Espaço pressionado, iniciar pan em vez de seleção
+      if (isSpaceDown) {
+        setIsPanning(true);
+        // O contêiner scrollável é o ancestral com overflow:auto (pai do wrapper com transform)
+        const scrollable = containerRef.current?.closest('[style*="overflow: auto"]') as HTMLElement | null
+          ?? containerRef.current?.parentElement?.parentElement ?? null;
+        setPanStart({
+          x: e.clientX,
+          y: e.clientY,
+          scrollX: scrollable?.scrollLeft ?? 0,
+          scrollY: scrollable?.scrollTop ?? 0,
+        });
+        return;
+      }
       e.preventDefault();
       if (!e.shiftKey) onSelectIds([]);
 
@@ -86,7 +151,7 @@ export function SlideCanvas({
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     },
-    [scale, onSelectIds, slide, selectionBox]
+    [scale, onSelectIds, slide, selectionBox, isSpaceDown]
   );
 
   // Delete/Backspace: only when NOT in a text-editing context
@@ -215,8 +280,34 @@ export function SlideCanvas({
         outline: 'none',
         border: isDragOver ? '2.5px dashed #3b82f6' : '2.5px solid transparent',
         transition: 'border-color 0.15s',
+        cursor: isPanning ? 'grabbing' : isSpaceDown ? 'grab' : 'default',
       }}
       onMouseDown={handleCanvasMouseDown}
+      onMouseMove={(e) => {
+        if (isPanning && panStart) {
+          const scrollable = containerRef.current?.closest('[style*="overflow: auto"]') as HTMLElement | null
+            ?? containerRef.current?.parentElement?.parentElement ?? null;
+          if (scrollable) {
+            scrollable.scrollLeft = panStart.scrollX - (e.clientX - panStart.x);
+            scrollable.scrollTop = panStart.scrollY - (e.clientY - panStart.y);
+          }
+        }
+      }}
+      onMouseUp={() => {
+        if (isPanning) {
+          setIsPanning(false);
+          setPanStart(null);
+        }
+      }}
+      onContextMenu={(e) => {
+        if (onContextMenu) {
+          e.preventDefault();
+          const target = e.target as HTMLElement;
+          const elementEl = target.closest('[data-element-id]');
+          const elementId = elementEl?.getAttribute('data-element-id') ?? null;
+          onContextMenu(e, elementId);
+        }
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

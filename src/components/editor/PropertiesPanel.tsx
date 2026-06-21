@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type {
   Slide, SlideElement, TextElement, ShapeElement,
   ImageElement, IconElement, Theme, Presentation,
@@ -18,6 +18,8 @@ interface Props {
   onRemoveElement?: (id: string) => void;
   onBringToFront?: (id: string) => void;
   onSendToBack?: (id: string) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 type Tab = 'element' | 'slide' | 'theme';
@@ -173,6 +175,33 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   );
 }
 
+/* ── AlignButton ────────────────────────────────────────── */
+function AlignButton({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      style={{
+        width: '100%',
+        height: 32,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r-xs)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-2)',
+        transition: 'all 0.12s',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-soft)'; e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+    >
+      {children}
+    </button>
+  );
+}
+
 /* ── Element-type properties ────────────────────────────── */
 
 function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: SlideElement) => SlideElement) => void }) {
@@ -313,8 +342,24 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
   );
 }
 
-function ImageProperties({ el, onChange }: { el: ImageElement; onChange: (u: (e: SlideElement) => SlideElement) => void }) {
+function ImageProperties({ el, onChange, onUpdate }: {
+  el: ImageElement;
+  onChange: (u: (e: SlideElement) => SlideElement) => void;
+  onUpdate: (props: Partial<ImageElement>) => void;
+}) {
   const upd = (props: Partial<ImageElement>) => onChange((e) => ({ ...e, ...props } as ImageElement));
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      if (src) onUpdate({ src });
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <>
@@ -328,6 +373,25 @@ function ImageProperties({ el, onChange }: { el: ImageElement; onChange: (u: (e:
             className="select"
             style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
           />
+        </Row>
+        <Row>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-ghost"
+            style={{ width: '100%', justifyContent: 'center', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            Substituir imagem
+          </button>
         </Row>
         <Row cols={2}>
           <div>
@@ -650,14 +714,115 @@ function ActionBtn({ onClick, title, danger, children }: {
   );
 }
 
+/* ── CollapseButton ─────────────────────────────────────── */
+function CollapseButton({ collapsed, onToggle }: { collapsed: boolean; onToggle?: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      title={collapsed ? 'Expandir propriedades' : 'Recolher propriedades'}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-3)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '4px',
+        borderRadius: 'var(--r-xs)',
+        transition: 'all 0.15s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        {collapsed
+          ? <path d="M11 19l-7-7 7-7M21 19l-7-7 7-7"/>
+          : <path d="M13 5l7 7-7 7M3 5l7 7-7 7"/>
+        }
+      </svg>
+    </button>
+  );
+}
+
 /* ── PropertiesPanel ───────────────────────────────────── */
 export function PropertiesPanel({
   presentation, slide, selectedElements,
   onUpdateElement, onUpdateSlide, onSetTheme,
   onDuplicateElement, onRemoveElement, onBringToFront, onSendToBack,
+  collapsed, onToggleCollapse,
 }: Props) {
   const [tab, setTab] = useState<Tab>('element');
   const el = selectedElements.length === 1 ? selectedElements[0] : null;
+
+  /* ── Collapsed state — faixa estreita ────────────────── */
+  if (collapsed) {
+    return (
+      <aside style={{
+        width: 36,
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderLeft: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 8,
+        overflow: 'hidden',
+      }}>
+        <CollapseButton collapsed={true} onToggle={onToggleCollapse} />
+      </aside>
+    );
+  }
+
+  /* ── Alignment helpers (multi-select) ───────────────── */
+  const alignElements = (type: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
+    const els = selectedElements;
+    const minX = Math.min(...els.map((e) => e.x));
+    const maxX = Math.max(...els.map((e) => e.x + e.width));
+    const minY = Math.min(...els.map((e) => e.y));
+    const maxY = Math.max(...els.map((e) => e.y + e.height));
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+
+    els.forEach((elem) => {
+      let x = elem.x, y = elem.y;
+      if (type === 'left') x = minX;
+      else if (type === 'centerH') x = midX - elem.width / 2;
+      else if (type === 'right') x = maxX - elem.width;
+      else if (type === 'top') y = minY;
+      else if (type === 'centerV') y = midY - elem.height / 2;
+      else if (type === 'bottom') y = maxY - elem.height;
+      onUpdateElement(elem.id, (e) => ({ ...e, x, y }));
+    });
+  };
+
+  const distributeElements = (axis: 'H' | 'V') => {
+    const els = selectedElements;
+    if (els.length < 3) return;
+    if (axis === 'H') {
+      const sorted = [...els].sort((a, b) => a.x - b.x);
+      const totalW = sorted.reduce((s, e) => s + e.width, 0);
+      const start = sorted[0].x;
+      const end = sorted[sorted.length - 1].x + sorted[sorted.length - 1].width;
+      const gap = (end - start - totalW) / (sorted.length - 1);
+      let cur = start;
+      sorted.forEach((elem) => {
+        onUpdateElement(elem.id, (e) => ({ ...e, x: cur }));
+        cur += elem.width + gap;
+      });
+    } else {
+      const sorted = [...els].sort((a, b) => a.y - b.y);
+      const totalH = sorted.reduce((s, e) => s + e.height, 0);
+      const start = sorted[0].y;
+      const end = sorted[sorted.length - 1].y + sorted[sorted.length - 1].height;
+      const gap = (end - start - totalH) / (sorted.length - 1);
+      let cur = start;
+      sorted.forEach((elem) => {
+        onUpdateElement(elem.id, (e) => ({ ...e, y: cur }));
+        cur += elem.height + gap;
+      });
+    }
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'element', label: 'Elemento' },
@@ -665,6 +830,187 @@ export function PropertiesPanel({
     { id: 'theme', label: 'Tema' },
   ];
 
+  /* ── Render: sem seleção ─────────────────────────────── */
+  if (selectedElements.length === 0) {
+    return (
+      <aside style={{
+        width: 256,
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderLeft: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Cabeçalho sem tabs */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface)',
+          flexShrink: 0,
+          padding: '10px 14px 8px',
+        }}>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: 'var(--text-3)',
+          }}>
+            Slide atual
+          </span>
+          <CollapseButton collapsed={false} onToggle={onToggleCollapse} />
+        </div>
+
+        {/* Conteúdo: SlideProperties + ThemeProperties */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {slide && <SlideProperties slide={slide} onUpdateSlide={onUpdateSlide} />}
+          <ThemeProperties presentation={presentation} onSetTheme={onSetTheme} />
+        </div>
+      </aside>
+    );
+  }
+
+  /* ── Render: multi-seleção ───────────────────────────── */
+  if (selectedElements.length > 1) {
+    return (
+      <aside style={{
+        width: 256,
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderLeft: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Cabeçalho */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px 8px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface)',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 500 }}>
+            {selectedElements.length} elementos selecionados
+          </span>
+          <CollapseButton collapsed={false} onToggle={onToggleCollapse} />
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {/* Seção de Alinhamento */}
+          <Section title="Alinhamento" defaultOpen={true}>
+            {/* Linha 1: Alinhamento horizontal */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 4 }}>
+              <AlignButton title="Alinhar à esquerda" onClick={() => alignElements('left')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 6h16M4 12h10M4 18h14"/><line x1="2" y1="4" x2="2" y2="20"/>
+                </svg>
+              </AlignButton>
+              <AlignButton title="Centralizar horizontalmente" onClick={() => alignElements('centerH')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M2 12h20M6 6h12M4 18h16"/><line x1="12" y1="2" x2="12" y2="22"/>
+                </svg>
+              </AlignButton>
+              <AlignButton title="Alinhar à direita" onClick={() => alignElements('right')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 6h16M10 12h10M6 18h14"/><line x1="22" y1="4" x2="22" y2="20"/>
+                </svg>
+              </AlignButton>
+            </div>
+            {/* Linha 2: Alinhamento vertical */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 4 }}>
+              <AlignButton title="Alinhar ao topo" onClick={() => alignElements('top')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M6 4h4v10H6zM14 4h4v7h-4z"/><line x1="2" y1="4" x2="22" y2="4"/>
+                </svg>
+              </AlignButton>
+              <AlignButton title="Centralizar verticalmente" onClick={() => alignElements('centerV')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M6 7h4v10H6zM14 9h4v6h-4z"/><line x1="2" y1="12" x2="22" y2="12"/>
+                </svg>
+              </AlignButton>
+              <AlignButton title="Alinhar à base" onClick={() => alignElements('bottom')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M6 10h4v10H6zM14 13h4v7h-4z"/><line x1="2" y1="20" x2="22" y2="20"/>
+                </svg>
+              </AlignButton>
+            </div>
+            {/* Linha 3: Distribuição */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+              <AlignButton title="Distribuir horizontalmente" onClick={() => distributeElements('H')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <rect x="2" y="7" width="4" height="10" rx="1"/><rect x="18" y="7" width="4" height="10" rx="1"/><rect x="10" y="9" width="4" height="6" rx="1"/>
+                </svg>
+              </AlignButton>
+              <AlignButton title="Distribuir verticalmente" onClick={() => distributeElements('V')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <rect x="7" y="2" width="10" height="4" rx="1"/><rect x="7" y="18" width="10" height="4" rx="1"/><rect x="9" y="10" width="6" height="4" rx="1"/>
+                </svg>
+              </AlignButton>
+            </div>
+          </Section>
+
+          {/* Opacidade global */}
+          <Section title="Opacidade" defaultOpen={true}>
+            <Row>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="range" min={0} max={1} step={0.01}
+                  value={selectedElements[0]?.opacity ?? 1}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    selectedElements.forEach((elem) => onUpdateElement(elem.id, (el) => ({ ...el, opacity: val })));
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-3)', minWidth: 34, textAlign: 'right' }}>
+                  {Math.round((selectedElements[0]?.opacity ?? 1) * 100)}%
+                </span>
+              </div>
+            </Row>
+          </Section>
+
+          {/* Excluir seleção */}
+          <div style={{ padding: '8px 14px 14px' }}>
+            <button
+              onClick={() => selectedElements.forEach((elem) => onRemoveElement?.(elem.id))}
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 12px',
+                background: 'transparent',
+                border: '1px solid var(--bad-soft)',
+                borderRadius: 'var(--r-xs)',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--bad)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.12s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bad-soft)'; e.currentTarget.style.borderColor = 'var(--bad)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--bad-soft)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+              </svg>
+              Excluir seleção
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  /* ── Render: seleção única (padrão com tabs) ─────────── */
   return (
     <aside style={{
       width: 256,
@@ -675,68 +1021,47 @@ export function PropertiesPanel({
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      {/* Tabs */}
+      {/* Tabs + botão colapso */}
       <div style={{
         display: 'flex',
         borderBottom: '1px solid var(--border)',
         background: 'var(--surface)',
         flexShrink: 0,
+        alignItems: 'stretch',
       }}>
-        {tabs.map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            style={{
-              flex: 1,
-              padding: '11px 0',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: tab === tb.id ? '2px solid var(--accent)' : '2px solid transparent',
-              fontSize: 12,
-              fontWeight: tab === tb.id ? 700 : 500,
-              color: tab === tb.id ? 'var(--accent)' : 'var(--text-3)',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-              fontFamily: 'inherit',
-              letterSpacing: '0.01em',
-            }}
-          >
-            {tb.label}
-          </button>
-        ))}
+        <div style={{ display: 'flex', flex: 1 }}>
+          {tabs.map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => setTab(tb.id)}
+              style={{
+                flex: 1,
+                padding: '11px 0',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: tab === tb.id ? '2px solid var(--accent)' : '2px solid transparent',
+                fontSize: 12,
+                fontWeight: tab === tb.id ? 700 : 500,
+                color: tab === tb.id ? 'var(--accent)' : 'var(--text-3)',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'inherit',
+                letterSpacing: '0.01em',
+              }}
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 6px', borderLeft: '1px solid var(--border)' }}>
+          <CollapseButton collapsed={false} onToggle={onToggleCollapse} />
+        </div>
       </div>
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'element' && (
           <>
-            {!el && (
-              <div style={{
-                padding: '48px 20px',
-                textAlign: 'center',
-                color: 'var(--text-3)',
-              }}>
-                <div style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 'var(--r-md)',
-                  background: 'var(--surface-2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 12px',
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <path d="M3 9h18M9 21V9"/>
-                  </svg>
-                </div>
-                <p style={{ fontSize: 12.5, lineHeight: 1.5, margin: 0, color: 'var(--text-3)' }}>
-                  Selecione um elemento para ver e editar suas propriedades
-                </p>
-              </div>
-            )}
-
             {el && (
               <>
                 {/* Quick actions */}
@@ -776,7 +1101,13 @@ export function PropertiesPanel({
 
                 <CommonProperties el={el} onChange={(updater) => onUpdateElement(el.id, updater)} />
                 {el.type === 'text' && <TextProperties el={el as TextElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
-                {el.type === 'image' && <ImageProperties el={el as ImageElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
+                {el.type === 'image' && (
+                  <ImageProperties
+                    el={el as ImageElement}
+                    onChange={(updater) => onUpdateElement(el.id, updater)}
+                    onUpdate={(props) => onUpdateElement(el.id, (e) => ({ ...e, ...props } as ImageElement))}
+                  />
+                )}
                 {el.type === 'shape' && <ShapeProperties el={el as ShapeElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
                 {el.type === 'icon' && <IconProperties el={el as IconElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
               </>

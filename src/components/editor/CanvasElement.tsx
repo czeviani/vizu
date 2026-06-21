@@ -218,6 +218,7 @@ export function CanvasElement({
 
   return (
     <div
+      data-element-id={el.id}
       style={{
         position: 'absolute',
         left: el.x,
