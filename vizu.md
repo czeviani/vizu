@@ -515,6 +515,7 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
 | Mudança de URL ou porta | §2 (URLs) + §5 (workflow) |
 | Integração Supabase | §4.9 (persistência) + §3 (stack) |
 | Nova limitação de export | §4.8 (limitações conhecidas) |
+| Nova classe CSS ou token | §9 (design system) |
 
 **Regras de manutenção:**
 1. Atualizar apenas a seção relevante
@@ -524,23 +525,126 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
 
 ---
 
-## 9. OTIMIZAÇÃO PARA LLM
+## 9. DESIGN SYSTEM (V2 — implementado em 2026-06-20/21)
+
+### Tokens CSS (`globals.css`)
+
+**Modo claro (`:root`):**
+```css
+--bg: #f7f8fa          /* fundo de página */
+--surface: #ffffff     /* cards, painéis */
+--surface-2: #f1f3f6   /* fundo alternativo */
+--border: #e4e7ec      /* bordas padrão */
+--text: #16181d        /* texto primário */
+--text-2: #5c6370      /* texto secundário */
+--text-3: #8b919e      /* texto terciário, labels */
+--accent: #6d5ae6      /* violeta-índigo (distinto do azul do NOUS) */
+--accent-soft: rgba(109,90,230,0.10)
+--ok: #16a34a / --ok-soft: rgba(22,163,74,0.12)
+--bad: #dc2626 / --bad-soft: rgba(220,38,38,0.10)
+--warn: #d97706 / --warn-soft: rgba(217,119,6,0.10)
+--info: #2563eb / --info-soft: rgba(37,99,235,0.10)
+--canvas-bg: #e5e7ed
+--r-xs: 6px  --r-sm: 8px  --r-md: 12px  --r-lg: 16px  --r-full: 999px
+--shadow-sm / --shadow-md / --shadow-lg
+```
+
+**Modo escuro (`[data-theme="dark"]`):** tokens redefinidos com valores escuros (`--bg: #0d0f13`, `--accent: #8b7cf8`, etc.)
+
+**Sidebar sempre escura (independente do tema):**
+```css
+--sidebar-bg: #10121a
+--sidebar-border: rgba(255,255,255,0.07)
+--sidebar-text: rgba(255,255,255,0.50)
+--sidebar-text-active: rgba(255,255,255,0.92)
+--sidebar-accent: #8b7cf8
+--sidebar-accent-soft: rgba(139,124,248,0.14)
+```
+
+### Tipografia
+
+- Fonte: **Inter** via Google Fonts (`font-display: swap`), fallback `system-ui, sans-serif`
+- Números tabulares: `font-variant-numeric: tabular-nums` em badges e contadores
+
+### Tema 3-estados
+
+- Estados: `light` / `dark` / `auto`
+- Persistência: `localStorage['vizu-theme']`
+- Anti-flash script inline no `<head>` (executa antes do CSS pintar)
+- Toggle visível no topbar da home e na toolbar do editor
+- `data-theme-pref` attribute no `<html>` para os 3 estados
+- Dispara `CustomEvent('themechange')` ao trocar
+
+### Classes CSS de componentes
+
+| Classe | Uso |
+|--------|-----|
+| `.btn` | botão base (display flex, gap, radius, transition) |
+| `.btn-primary` | accent bg + branco |
+| `.btn-ghost` | fundo transparente + borda border |
+| `.btn-danger` | texto bad, hover bad-soft |
+| `.tool-btn` | botão de toolbar (32×32, icon only) |
+| `.card` | surface + border + shadow-sm + radius-md |
+| `.card.clickable:hover` | translateY(-3px) + shadow-md |
+| `.tag` | pill pequeno 10px |
+| `.tag-ok/warn/bad/info/accent` | cores semânticas para tags |
+| `.nav-item` | item de sidebar (padding, hover accent-soft) |
+| `.nav-item.active` | accent bg-soft + accent text |
+| `.nav-badge` | contador redondo à direita do nav-item |
+| `.skeleton` | shimmer animado para loading states |
+| `.toast` | notificação flutuante (auto-dismiss 3.2s) |
+| `.toast-ok/bad/info` | variantes com ícone e cor |
+| `.toast-progress` | barra de progresso animada |
+| `.modal-backdrop` | overlay com backdrop-filter blur(4px) |
+| `.modal-box` | container modal centralizado |
+| `.input` | input text estilizado |
+| `.select` | select estilizado |
+| `.theme-toggle` | container 3-estado light/auto/dark |
+
+### Componentes de UI implementados
+
+**Home page (`src/app/page.tsx`):**
+- `ThemeToggle` — toggle 3-estados com dispatch de `themechange`
+- `PresentationCard` — thumbnail 16:9 (paddingBottom trick), badge de slides, menu ···, swatches
+- `CardSkeleton` — placeholder shimmer para loading
+- `Modal` — backdrop blur, animação, botão fechar
+- `ToastContainer` + lógica de toast (`showToast(msg, type)`, auto-dismiss 3.2s)
+- `HomePage` — sidebar colapsável 240px→64px (ícones only, transition 0.22s cubic), topbar, grid de cards
+
+**Editor (`src/components/editor/`):**
+- `Toolbar` — 60px, logo monogram, título editável inline, save indicator, insert tools, zoom, preview, export, ThemeToggle
+- `SlidePanel` — miniaturas 120×68, hover overlay com ações, layout picker dropdown, dashed add button
+- `PropertiesPanel` — tabs Elemento/Slide/Tema, collapsible sections, ColorSwatch, NumInput, ThemeProperties com preview cards
+- `ContextToolbar` — barra contextual 42px abaixo do toolbar quando elementos selecionados
+
+### Decisões de design
+
+- **Acento violeta-índigo** (#6d5ae6 light / #8b7cf8 dark) — distinto do azul do NOUS para identidade própria
+- **Sidebar sempre escura** — usa tokens `--sidebar-*` separados, não afetados pelo tema global
+- **Colapsável** — `sidebarCollapsed` state; ícones com `title` tooltip em estado colapsado
+- **Sem Tailwind no editor** — inline styles com CSS vars para evitar conflito de especificidade com o canvas
+- **16:9 thumbnail** — `height:0; paddingBottom:56.25%` no container outer + `position:absolute` inner
+
+---
+
+## 10. OTIMIZAÇÃO PARA LLM
 
 - Tipos TypeScript: resumo em §7, implementação completa em `types/slide.ts`
 - Funções: parâmetros + retorno + efeito — nunca implementação completa
 - Coordenadas: sempre em pixels nativos (960×540), scale só para render
 - Temas e layouts: tabelas em vez de prosa
 - API: request/response exemplos concretos em §5
+- Design system: tokens CSS em §9, classes de componentes em §9
 
 **O que NÃO está aqui (buscar no código):**
 - Implementação completa dos componentes React
-- Detalhes de CSS/inline styles
+- Detalhes de inline styles por componente
 - Lógica de drag/resize em `CanvasElement.tsx`
 - Mapeamento completo pptxGenJS em `pptxExport.ts`
 
 ---
 
-## 10. HISTÓRICO
+## 11. HISTÓRICO
 
 - [2026-06-13] Projeto iniciado — stack Next.js 16 + TS, canvas HTML/CSS, PptxGenJS
 - [2026-06-13] Implementados: 7 layouts, 6 temas, 5 tipos de elemento, undo/redo, export .pptx
@@ -561,3 +665,12 @@ Ao modificar o código, atualizar APENAS a seção relevante deste arquivo:
   - **Icon PPTX export:** Ícones Lucide agora exportam corretamente no .pptx — `iconToDataUrl()` em `iconPaths.ts` converte SVG path para PNG via canvas offscreen (200×200px); `pptxExport.ts` chama esta função async para cada `IconElement`
   - **Novos arquivos:** `src/lib/i18n.ts`, `src/lib/iconPaths.ts`, `src/components/editor/ContextToolbar.tsx`
   - **ImageEl:** Placeholder atualizado com instrução de upload; aceita imagens via data URL (localStorage-friendly)
+- [2026-06-20/21] **Redesign visual completo (V2):**
+  - `globals.css`: design token system completo (CSS custom properties claro/escuro/auto, tokens de sidebar sempre escura, classes `.btn`, `.card`, `.tag`, `.skeleton`, `.toast`, `.modal-*`, `.nav-item`, `.theme-toggle`, `.input`, `.select`, `.tool-btn`)
+  - `layout.tsx`: anti-flash script 3-estados, `lang="pt-BR"`, `color-scheme` meta
+  - `page.tsx` (home): sidebar 240px colapsável para 64px (ícones only, `transition: width 0.22s`), `ThemeToggle` 3-estados, `PresentationCard` com thumbnail 16:9, `CardSkeleton` shimmer, `Modal` backdrop-blur, `ToastContainer` (auto-dismiss 3.2s, tipos ok/bad/info), toasts em `handleDelete` e `handleDuplicate`
+  - `Toolbar.tsx`: 60px, logo monogram, título editável inline, save indicator, `ThemeToggle` editor, `ShapeMenu` atualizado
+  - `SlidePanel.tsx`: miniaturas 120×68 com hover overlay, layout picker dropdown, footer dashed "Adicionar slide"
+  - `PropertiesPanel.tsx`: tabs Elemento/Slide/Tema, sections colapsáveis, `ColorSwatch`, `NumInput`, `ThemeProperties` com preview cards
+  - `ContextToolbar.tsx`: variáveis CSS renomeadas (`--accent-soft` em vez de `--accent-subtle`, `--text-3` em vez de `--text-secondary`); aliases de compat em `globals.css`
+  - Design decisions documentadas em §9

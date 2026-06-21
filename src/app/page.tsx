@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { v4 as uuid } from 'uuid';
 import type { Presentation } from '@/types/slide';
@@ -14,16 +14,382 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+/* ── Icon components ──────────────────────────────────────────── */
+function IcoPresentation() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+}
+function IcoPlus() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>;
+}
+function IcoSearch() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
+}
+function IcoSettings() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+}
+function IcoLayout() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>;
+}
+function IcoDownload() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>;
+}
+function IcoClose() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>;
+}
+function IcoEllipsis() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>;
+}
+function IcoDuplicate() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+}
+function IcoTrash() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>;
+}
+function IcoOpen() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>;
+}
+
+/* ── Theme Toggle ─────────────────────────────────────────────── */
+function ThemeToggle() {
+  const [pref, setPref] = useState<'light' | 'dark' | 'auto'>('auto');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('vizu-theme') as 'light' | 'dark' | 'auto' | null;
+    setPref(stored ?? 'auto');
+  }, []);
+
+  const apply = (next: 'light' | 'dark' | 'auto') => {
+    setPref(next);
+    localStorage.setItem('vizu-theme', next);
+    const dark = next === 'dark' || (next === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme-pref', next);
+    document.dispatchEvent(new CustomEvent('themechange', { detail: { dark } }));
+  };
+
+  return (
+    <div className="theme-toggle" role="radiogroup" aria-label="Tema">
+      <button
+        data-set-theme="light"
+        aria-label="Tema claro"
+        className={pref === 'light' ? 'active' : ''}
+        onClick={() => apply('light')}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button
+        data-set-theme="auto"
+        aria-label="Seguir sistema"
+        className={pref === 'auto' ? 'active' : ''}
+        onClick={() => apply('auto')}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </button>
+      <button
+        data-set-theme="dark"
+        aria-label="Tema escuro"
+        className={pref === 'dark' ? 'active' : ''}
+        onClick={() => apply('dark')}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+  );
+}
+
+/* ── Card de Apresentação ─────────────────────────────────────── */
+function PresentationCard({
+  presentation: p,
+  onOpen,
+  onDuplicate,
+  onDelete,
+}: {
+  presentation: Presentation;
+  onOpen: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const coverSlide = p.slides[0];
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const menuItems = [
+    { label: t.card_open, icon: <IcoOpen />, action: (e: React.MouseEvent) => { e.stopPropagation(); onOpen(); setMenuOpen(false); } },
+    { label: t.card_duplicate, icon: <IcoDuplicate />, action: (e: React.MouseEvent) => { e.stopPropagation(); onDuplicate(); setMenuOpen(false); } },
+    { label: t.card_delete, icon: <IcoTrash />, action: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }, danger: true },
+  ];
+
+  return (
+    <div
+      className="card clickable"
+      style={{ overflow: 'hidden', position: 'relative' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); }}
+      onClick={onOpen}
+    >
+      {/* Thumbnail 16:9 */}
+      <div style={{
+        height: 0,
+        paddingBottom: '56.25%',
+        position: 'relative',
+        background: coverSlide?.background?.type === 'color'
+          ? coverSlide.background.color
+          : coverSlide?.background?.type === 'gradient'
+            ? `linear-gradient(${coverSlide.background.gradient?.direction ?? 135}deg, ${coverSlide.background.gradient?.from}, ${coverSlide.background.gradient?.to})`
+            : 'var(--surface-2)',
+        overflow: 'hidden',
+      }}>
+        {coverSlide && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0,
+            transform: 'scale(0.289)',
+            transformOrigin: 'top left',
+            width: 960,
+            height: 540,
+            pointerEvents: 'none',
+          }}>
+            <SlideMiniature slide={coverSlide} presentation={p} />
+          </div>
+        )}
+
+        {/* Slide count badge */}
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          background: 'rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(4px)',
+          color: '#fff',
+          fontSize: 11,
+          fontWeight: 600,
+          padding: '2px 8px',
+          borderRadius: 'var(--r-full)',
+        }}>
+          {p.slides.length} slides
+        </div>
+
+        {/* Hover overlay */}
+        {hovered && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'opacity 0.15s',
+          }}>
+            <div style={{
+              background: 'var(--accent)',
+              color: '#fff',
+              borderRadius: 'var(--r-sm)',
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 3l14 9-14 9V3z"/></svg>
+              Abrir editor
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Card body */}
+      <div style={{ padding: '14px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{
+              margin: 0,
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--text)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: '-0.01em',
+            }}>
+              {p.title}
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+              Editado {formatDate(p.metadata.updatedAt)}
+            </p>
+          </div>
+
+          {/* Menu ··· */}
+          <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+              style={{
+                background: menuOpen ? 'var(--surface-2)' : 'transparent',
+                border: '1px solid transparent',
+                borderRadius: 'var(--r-xs)',
+                padding: '4px 6px',
+                cursor: 'pointer',
+                color: 'var(--text-3)',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
+              onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; } }}
+            >
+              <IcoEllipsis />
+            </button>
+
+            {menuOpen && (
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                top: 'calc(100% + 4px)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
+                padding: '4px 0',
+                zIndex: 99,
+                minWidth: 160,
+                boxShadow: 'var(--shadow-lg)',
+              }}>
+                {menuItems.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    style={{
+                      width: '100%',
+                      padding: '9px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: item.danger ? 'var(--bad)' : 'var(--text-2)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontFamily: 'inherit',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = item.danger ? 'var(--bad-soft)' : 'var(--surface-2)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Theme swatches */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10 }}>
+          {[p.theme.colors.primary, p.theme.colors.secondary, p.theme.colors.accent].map((c, i) => (
+            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
+          ))}
+          <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 2 }}>{p.theme.name}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Skeleton Card ────────────────────────────────────────────── */
+function CardSkeleton() {
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="skeleton" style={{ height: 158 }} />
+      <div style={{ padding: '14px 16px' }}>
+        <div className="skeleton" style={{ height: 14, width: '70%', marginBottom: 8 }} />
+        <div className="skeleton" style={{ height: 11, width: '45%' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Modal ────────────────────────────────────────────────────── */
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="modal-box">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)' }}>{title}</h2>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 6, cursor: 'pointer', color: 'var(--text-3)', display: 'flex', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
+          >
+            <IcoClose />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ── Toast System ─────────────────────────────────────────────── */
+type ToastType = 'ok' | 'bad' | 'info';
+interface Toast { id: number; message: string; type: ToastType; }
+
+function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: number) => void }) {
+  return (
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {toasts.map((toast) => (
+        <div key={toast.id} className={`toast toast-${toast.type}`} style={{ cursor: 'pointer' }} onClick={() => onRemove(toast.id)}>
+          {toast.type === 'ok' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>}
+          {toast.type === 'bad' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>}
+          {toast.type === 'info' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>}
+          {toast.message}
+          <div className="toast-progress" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Home Page ────────────────────────────────────────────────── */
 export default function HomePage() {
   const router = useRouter();
   const [presentations, setPresentations] = useState<Presentation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState('Nova Apresentação');
   const [newThemeId, setNewThemeId] = useState('slate');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
 
-  const load = useCallback(() => setPresentations(storage.list()), []);
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = ++toastId.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3200);
+  }, []);
+
+  const load = useCallback(() => {
+    setPresentations(storage.list());
+    setLoading(false);
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   const handleCreate = useCallback(() => {
@@ -48,61 +414,320 @@ export default function HomePage() {
     storage.delete(id);
     load();
     setDeleteConfirm(null);
-  }, [load]);
+    showToast('Apresentação excluída', 'bad');
+  }, [load, showToast]);
 
   const handleDuplicate = useCallback((p: Presentation) => {
     const now = new Date().toISOString();
-    const copy: Presentation = { ...p, id: uuid(), title: `${p.title} (cópia)`, metadata: { ...p.metadata, createdAt: now, updatedAt: now } };
+    const copy: Presentation = {
+      ...p,
+      id: uuid(),
+      title: `${p.title} (cópia)`,
+      metadata: { ...p.metadata, createdAt: now, updatedAt: now },
+    };
     storage.set(copy);
     load();
-  }, [load]);
+    showToast('Apresentação duplicada', 'ok');
+  }, [load, showToast]);
 
-  const filtered = presentations.filter((p) => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = presentations.filter((p) =>
+    p.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const navItems = [
+    { icon: <IcoPresentation />, label: 'Apresentações', active: true, badge: presentations.length > 0 ? presentations.length : null },
+    { icon: <IcoLayout />, label: 'Templates', active: false, badge: null },
+    { icon: <IcoDownload />, label: 'Exportações', active: false, badge: null },
+    { icon: <IcoSettings />, label: 'Configurações', active: false, badge: null },
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <header style={{ background: 'var(--panel-bg)', borderBottom: '1px solid var(--border)', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', gap: 24, position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--accent)', letterSpacing: -0.5 }}>{t.app_name}</div>
-        <div style={{ flex: 1 }} />
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t.home_search_placeholder}
-          style={{ padding: '7px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'var(--surface)', color: 'var(--text)', outline: 'none', width: 240 }}
-        />
-        <ThemeToggle />
-        <button
-          onClick={() => setShowNew(true)}
-          style={{ padding: '8px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
-          {t.home_new_btn}
-        </button>
-      </header>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '32px' }}>
-        {filtered.length === 0 && !searchQuery ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, gap: 16, color: 'var(--text-secondary)' }}>
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-              <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-            </svg>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{t.home_empty_title}</p>
-              <p style={{ fontSize: 14, margin: '8px 0 0' }}>{t.home_empty_sub}</p>
+      {/* ── Sidebar ──────────────────────────────────────────── */}
+      <aside style={{
+        width: sidebarCollapsed ? 64 : 240,
+        flexShrink: 0,
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--sidebar-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        zIndex: 10,
+        transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '20px 14px 16px', borderBottom: '1px solid var(--sidebar-border)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: 'var(--sidebar-accent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <path d="M8 21h8M12 17v4"/>
+              </svg>
             </div>
-            <button onClick={() => setShowNew(true)} style={{ padding: '10px 24px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-              {t.home_empty_btn}
-            </button>
+            {!sidebarCollapsed && (
+              <div style={{ overflow: 'hidden', flexShrink: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--sidebar-text-active)', letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                  Vizu
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--sidebar-text)', marginTop: 2, whiteSpace: 'nowrap' }}>Editor de slides</div>
+              </div>
+            )}
           </div>
-        ) : (
-          <>
-            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
-                {searchQuery ? t.home_result(searchQuery) : t.home_title}
-              </h1>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t.home_count(filtered.length)}</span>
+        </div>
+
+        {/* Nova apresentação */}
+        <div style={{ padding: '12px 12px 8px' }}>
+          <button
+            onClick={() => setShowNew(true)}
+            title={sidebarCollapsed ? 'Nova Apresentação' : undefined}
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              background: 'var(--sidebar-accent)',
+              borderColor: 'var(--sidebar-accent)',
+              padding: sidebarCollapsed ? '8px' : undefined,
+              minWidth: 0,
+            }}
+          >
+            <IcoPlus />
+            {!sidebarCollapsed && 'Nova Apresentação'}
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '4px 8px', overflowY: 'auto', overflowX: 'hidden' }} className="sidebar-scroll">
+          {!sidebarCollapsed && (
+            <div style={{ marginBottom: 4, padding: '8px 4px 4px', fontSize: 11, fontWeight: 600, color: 'var(--sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+              Principal
             </div>
+          )}
+          {sidebarCollapsed && <div style={{ height: 12 }} />}
+          {navItems.map((item) => (
+            <button
+              key={item.label}
+              title={sidebarCollapsed ? item.label : undefined}
+              className={`nav-item${item.active ? ' active' : ''}`}
+              style={{
+                marginBottom: 2,
+                justifyContent: sidebarCollapsed ? 'center' : undefined,
+                padding: sidebarCollapsed ? '9px 8px' : undefined,
+              }}
+            >
+              <span style={{ color: item.active ? 'var(--sidebar-accent)' : 'var(--sidebar-text)', flexShrink: 0 }}>
+                {item.icon}
+              </span>
+              {!sidebarCollapsed && item.label}
+              {!sidebarCollapsed && item.badge !== null && (
+                <span className="nav-badge">{item.badge}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 12px', borderTop: '1px solid var(--sidebar-border)' }}>
+          {/* User info row */}
+          {!sidebarCollapsed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: 'var(--sidebar-accent-soft)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--sidebar-accent)',
+                fontSize: 13,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}>
+                V
+              </div>
+              <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sidebar-text-active)', whiteSpace: 'nowrap' }}>Meu espaço</div>
+                <div style={{ fontSize: 11, color: 'var(--sidebar-text)', whiteSpace: 'nowrap' }}>Armazenamento local</div>
+              </div>
+            </div>
+          )}
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            style={{
+              width: '100%',
+              padding: '7px 8px',
+              background: 'transparent',
+              border: '1px solid var(--sidebar-border)',
+              borderRadius: 'var(--r-sm)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              gap: 8,
+              color: 'var(--sidebar-text)',
+              fontSize: 12,
+              fontWeight: 500,
+              fontFamily: 'inherit',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-accent-soft)'; e.currentTarget.style.color = 'var(--sidebar-accent)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s', flexShrink: 0 }}
+            >
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            {!sidebarCollapsed && 'Recolher'}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main area ──────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+
+        {/* Topbar */}
+        <header style={{
+          height: 60,
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 24px',
+          gap: 12,
+          flexShrink: 0,
+          zIndex: 5,
+        }}>
+          {/* Search */}
+          <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
+            <span style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-3)',
+              pointerEvents: 'none',
+              display: 'flex',
+            }}>
+              <IcoSearch />
+            </span>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar apresentações…"
+              className="input"
+              style={{ paddingLeft: 36, fontSize: 13.5 }}
+            />
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Theme toggle */}
+          <ThemeToggle />
+
+          {/* New btn */}
+          <button
+            onClick={() => setShowNew(true)}
+            className="btn btn-primary"
+          >
+            <IcoPlus />
+            Nova apresentação
+          </button>
+        </header>
+
+        {/* Content */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+          {/* Page header */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: 4 }}>
+                {searchQuery ? `Resultados para "${searchQuery}"` : 'Minhas Apresentações'}
+              </h1>
+              {!loading && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>
+                  {filtered.length} {filtered.length !== 1 ? 'apresentações' : 'apresentação'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Loading skeletons */}
+          {loading && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+              {[1, 2, 3, 4, 5, 6].map((i) => <CardSkeleton key={i} />)}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && filtered.length === 0 && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '80px 0',
+              gap: 16,
+            }}>
+              <div style={{
+                width: 72,
+                height: 72,
+                borderRadius: 'var(--r-lg)',
+                background: 'var(--accent-soft)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent)',
+              }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/>
+                  <path d="M8 21h8M12 17v4"/>
+                </svg>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+                  {searchQuery ? 'Nenhum resultado encontrado' : 'Nenhuma apresentação ainda'}
+                </h2>
+                <p style={{ fontSize: 14, color: 'var(--text-3)', maxWidth: 360, margin: '0 auto' }}>
+                  {searchQuery
+                    ? `Tente buscar por outro termo.`
+                    : 'Crie sua primeira apresentação e comece a contar histórias visuais.'}
+                </p>
+              </div>
+              {!searchQuery && (
+                <button onClick={() => setShowNew(true)} className="btn btn-primary" style={{ marginTop: 8 }}>
+                  <IcoPlus />
+                  Criar primeira apresentação
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Cards grid */}
+          {!loading && filtered.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 20,
+            }}>
               {filtered.map((p) => (
                 <PresentationCard
                   key={p.id}
@@ -113,176 +738,89 @@ export default function HomePage() {
                 />
               ))}
             </div>
-          </>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
 
+      {/* ── Modal: Nova Apresentação ─────────────────────────── */}
       {showNew && (
-        <Modal onClose={() => setShowNew(false)} title={t.modal_new}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, fontWeight: 500 }}>{t.label_title}</label>
+        <Modal onClose={() => setShowNew(false)} title="Nova Apresentação">
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Título
+            </label>
             <input
               autoFocus
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+              className="input"
+              style={{ fontSize: 15 }}
+              placeholder="Nome da apresentação"
             />
           </div>
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 8, fontWeight: 500 }}>{t.label_theme}</label>
+
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', display: 'block', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Tema inicial
+            </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {DEFAULT_THEMES.map((theme) => (
                 <button
                   key={theme.id}
                   onClick={() => setNewThemeId(theme.id)}
-                  style={{ padding: 10, border: `2px solid ${newThemeId === theme.id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 8, background: theme.colors.background, cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.15s' }}
+                  style={{
+                    padding: 12,
+                    border: `2px solid ${newThemeId === theme.id ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 'var(--r-md)',
+                    background: newThemeId === theme.id ? 'var(--accent-soft)' : 'var(--bg)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s var(--ease)',
+                  }}
                 >
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                  {/* Mini preview */}
+                  <div style={{ height: 36, borderRadius: 6, background: theme.colors.background, marginBottom: 8, overflow: 'hidden', position: 'relative', border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <div style={{ position: 'absolute', bottom: 6, left: 6, right: 6, height: 3, borderRadius: 2, background: theme.colors.primary, opacity: 0.8 }} />
+                    <div style={{ position: 'absolute', bottom: 1, left: 6, width: '50%', height: 2, borderRadius: 2, background: theme.colors.secondary, opacity: 0.5 }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
                     {[theme.colors.primary, theme.colors.secondary, theme.colors.accent].map((c) => (
-                      <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                      <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
                     ))}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: theme.colors.text }}>{theme.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: newThemeId === theme.id ? 'var(--accent)' : 'var(--text-2)' }}>
+                    {theme.name}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button onClick={() => setShowNew(false)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text)', fontSize: 14 }}>{t.btn_cancel}</button>
-            <button onClick={handleCreate} style={{ padding: '8px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t.btn_create}</button>
+            <button onClick={() => setShowNew(false)} className="btn btn-ghost">{t.btn_cancel}</button>
+            <button onClick={handleCreate} className="btn btn-primary">{t.btn_create}</button>
           </div>
         </Modal>
       )}
 
+      {/* ── Modal: Confirmar Exclusão ────────────────────────── */}
       {deleteConfirm && (
-        <Modal onClose={() => setDeleteConfirm(null)} title={t.modal_delete}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>{t.modal_delete_confirm}</p>
+        <Modal onClose={() => setDeleteConfirm(null)} title="Excluir Apresentação">
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, lineHeight: 1.6 }}>
+            Esta ação não pode ser desfeita. A apresentação será removida permanentemente do seu armazenamento local.
+          </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button onClick={() => setDeleteConfirm(null)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text)', fontSize: 14 }}>{t.btn_cancel}</button>
-            <button onClick={() => handleDelete(deleteConfirm)} style={{ padding: '8px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{t.btn_delete}</button>
+            <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost">{t.btn_cancel}</button>
+            <button onClick={() => handleDelete(deleteConfirm)} className="btn btn-danger">
+              <IcoTrash />
+              {t.btn_delete}
+            </button>
           </div>
         </Modal>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
     </div>
-  );
-}
-
-function PresentationCard({ presentation: p, onOpen, onDuplicate, onDelete }: {
-  presentation: Presentation; onOpen: () => void; onDuplicate: () => void; onDelete: () => void;
-}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const coverSlide = p.slides[0];
-
-  return (
-    <div
-      style={{ background: 'var(--panel-bg)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.15s', position: 'relative' }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; setMenuOpen(false); }}
-      onClick={onOpen}
-    >
-      <div style={{ height: 158, background: coverSlide?.background?.type === 'color' ? coverSlide.background.color : '#f1f5f9', overflow: 'hidden', position: 'relative' }}>
-        {coverSlide && (
-          <div style={{ transform: 'scale(0.289)', transformOrigin: 'top left', width: 960, height: 540, pointerEvents: 'none' }}>
-            <SlideMiniature slide={coverSlide} presentation={p} />
-          </div>
-        )}
-        <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 11, padding: '2px 7px', borderRadius: 20 }}>
-          {p.slides.length} slides
-        </div>
-      </div>
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</h3>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(p.metadata.updatedAt)}</p>
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-            style={{ background: 'transparent', border: 'none', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', color: 'var(--text-secondary)', position: 'relative' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-            </svg>
-            {menuOpen && (
-              <>
-                <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }} />
-                <div style={{ position: 'absolute', right: 0, top: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 0', zIndex: 99, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-                  {[
-                    { label: t.card_open, action: (e: React.MouseEvent) => { e.stopPropagation(); onOpen(); } },
-                    { label: t.card_duplicate, action: (e: React.MouseEvent) => { e.stopPropagation(); onDuplicate(); setMenuOpen(false); } },
-                    { label: t.card_delete, action: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }, danger: true },
-                  ].map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={item.action}
-                      style={{ width: '100%', padding: '8px 14px', background: 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: (item as { danger?: boolean }).danger ? '#ef4444' : 'var(--text)', cursor: 'pointer' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </button>
-        </div>
-        <div style={{ display: 'flex', gap: 4, marginTop: 8, alignItems: 'center' }}>
-          {[p.theme.colors.primary, p.theme.colors.secondary, p.theme.colors.accent].map((c) => (
-            <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
-          ))}
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 4 }}>{p.theme.name}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--panel-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 480, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ThemeToggle() {
-  const [mode, setMode] = useState<'light' | 'dark' | 'auto'>('auto');
-
-  const cycle = () => {
-    const next = mode === 'light' ? 'dark' : mode === 'dark' ? 'auto' : 'light';
-    setMode(next);
-    if (next === 'auto') {
-      document.documentElement.removeAttribute('data-theme');
-      localStorage.removeItem('vizu-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('vizu-theme', next);
-    }
-  };
-
-  return (
-    <button
-      onClick={cycle}
-      title={`Tema: ${mode}`}
-      style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        {mode === 'dark'
-          ? <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-          : <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        }
-      </svg>
-      {mode === 'light' ? t.theme_light : mode === 'dark' ? t.theme_dark : t.theme_auto}
-    </button>
   );
 }

@@ -1,27 +1,20 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
-
 export const metadata: Metadata = {
-  title: "Vizu — Presentation Editor",
-  description: "Professional AI-powered presentation editor",
+  title: "Vizu — Editor de Apresentações",
+  description: "Editor de apresentações profissional com inteligência artificial",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="pt-BR">
       <head>
+        <meta name="color-scheme" content="light dark" />
+        {/* Anti-flash: aplica tema antes do paint */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                var t=localStorage.getItem('vizu-theme');
-                if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}
-                else if(window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.setAttribute('data-theme','dark');}
-              })();
-            `,
+            __html: `(function(){var p=localStorage.getItem('vizu-theme')||'auto';var d=p==='dark'||(p==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');document.documentElement.setAttribute('data-theme-pref',p);})();`,
           }}
         />
       </head>

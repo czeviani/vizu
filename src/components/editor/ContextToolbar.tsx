@@ -31,7 +31,7 @@ function CtxBtn({
       onClick={onClick}
       style={{
         padding: '4px 7px',
-        background: active ? 'var(--accent-subtle)' : 'transparent',
+        background: active ? 'var(--accent-soft)' : 'transparent',
         border: active ? '1.5px solid var(--accent)' : '1.5px solid transparent',
         borderRadius: 5,
         cursor: 'pointer',
@@ -177,7 +177,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
             />
           </div>
-          <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{t.lbl_color}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{t.lbl_color}</span>
         </div>
       </div>
     );
@@ -187,7 +187,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
     const se = el as ShapeElement;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: '100%' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t.sec_fill}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.sec_fill}</span>
         <div style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: se.fill, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
           <input
             type="color"
@@ -199,7 +199,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
           />
         </div>
         <Sep />
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Opacidade</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Opacidade</span>
         <input
           type="range"
           min={0} max={1} step={0.01}
@@ -207,7 +207,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
           onChange={(e) => updAll((el) => ({ ...el, opacity: parseFloat(e.target.value) }))}
           style={{ width: 80 }}
         />
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)', minWidth: 28 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>
           {Math.round(el.opacity * 100)}%
         </span>
       </div>
@@ -218,7 +218,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
     const ie = el as ImageElement;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: '100%' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t.lbl_fit}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.lbl_fit}</span>
         <select
           value={ie.objectFit}
           onChange={(e) =>
@@ -231,14 +231,14 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
           <option value="fill">{t.opt_fill}</option>
         </select>
         <Sep />
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Opacidade</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Opacidade</span>
         <input
           type="range" min={0} max={1} step={0.01}
           value={el.opacity}
           onChange={(e) => updAll((el) => ({ ...el, opacity: parseFloat(e.target.value) }))}
           style={{ width: 80 }}
         />
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)', minWidth: 28 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)', minWidth: 28 }}>
           {Math.round(el.opacity * 100)}%
         </span>
       </div>
@@ -249,7 +249,7 @@ export function ContextToolbar({ elements, onUpdateElement }: Props) {
     const ic = el as IconElement;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: '100%' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t.lbl_color}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.lbl_color}</span>
         <div style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: ic.color, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
           <input
             type="color"
