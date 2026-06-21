@@ -36,14 +36,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const clipboardRef = useRef<SlideElement[]>([]);
 
   // Estado de painéis colapsáveis com persistência em localStorage
-  const [slidePanelCollapsed, setSlidePanelCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('vizu-slide-panel') === 'collapsed';
-  });
-  const [propsPanelCollapsed, setPropsPanelCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('vizu-props-panel') === 'collapsed';
-  });
+  // Inicializa sempre false para evitar hydration mismatch (SSR vs client)
+  const [slidePanelCollapsed, setSlidePanelCollapsed] = useState(false);
+  const [propsPanelCollapsed, setPropsPanelCollapsed] = useState(false);
+
+  // Sincroniza com localStorage após mount
+  useEffect(() => {
+    setSlidePanelCollapsed(localStorage.getItem('vizu-slide-panel') === 'collapsed');
+    setPropsPanelCollapsed(localStorage.getItem('vizu-props-panel') === 'collapsed');
+  }, []);
 
   useEffect(() => {
     const p = storage.get(id);
