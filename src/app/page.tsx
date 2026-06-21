@@ -390,7 +390,11 @@ export default function HomePage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // Show cached data immediately, then sync from Supabase
+    load();
+    storage.init().then((hadRemote) => { if (hadRemote) load(); });
+  }, [load]);
 
   const handleCreate = useCallback(() => {
     const theme = DEFAULT_THEMES.find((th) => th.id === newThemeId) ?? DEFAULT_THEMES[0];

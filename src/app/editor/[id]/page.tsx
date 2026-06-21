@@ -47,21 +47,27 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   }, []);
 
   useEffect(() => {
-    const p = storage.get(id);
-    if (!p) {
-      setNotFound(true);
-    } else {
-      setPresentation(p);
-      // Verificar se acabou de ser criada (dentro de 10 segundos)
-      const createdAt = new Date(p.metadata?.createdAt ?? 0).getTime();
-      const isNew = Date.now() - createdAt < 10000;
-      if (isNew) {
-        // Mostrar toast de boas-vindas após 800ms (aguardar render)
-        setTimeout(() => setWelcomeToast(true), 800);
-        setTimeout(() => setWelcomeToast(false), 4800);
+    const load = async () => {
+      let p = storage.get(id);
+      if (!p) {
+        // Not in localStorage — try Supabase
+        await storage.init();
+        p = storage.get(id);
       }
-    }
-    setLoaded(true);
+      if (!p) {
+        setNotFound(true);
+      } else {
+        setPresentation(p);
+        const createdAt = new Date(p.metadata?.createdAt ?? 0).getTime();
+        const isNew = Date.now() - createdAt < 10000;
+        if (isNew) {
+          setTimeout(() => setWelcomeToast(true), 800);
+          setTimeout(() => setWelcomeToast(false), 4800);
+        }
+      }
+      setLoaded(true);
+    };
+    load();
   }, [id]);
 
   const {
