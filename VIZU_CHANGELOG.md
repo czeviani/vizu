@@ -1,5 +1,44 @@
 # VIZU Changelog
 
+## [2026-06-21] — Infraestrutura de IA: API Programática + in-vizu.md
+
+### Entregáveis desta sessão
+
+---
+
+### Interface Programática VIZU-AI (Fase 2)
+
+**Arquivos criados:**
+- `src/app/api/vizu-ai/execute/route.ts` — POST: array de 12 comandos estruturados em PT/EN
+- `src/app/api/vizu-ai/create/route.ts` — POST: criação de apresentação via JSON único
+- `src/app/api/vizu-ai/schema/route.ts` — GET: schema JSON completo para validação
+- `src/app/api/vizu-ai/comandos/route.ts` — GET: referência de todos os comandos com exemplos
+- `src/app/api/vizu-ai/temas/route.ts` — GET: catálogo de 6 temas com tokens de cor
+- `src/app/api/vizu-ai/layouts/route.ts` — GET: 7 layouts com elementos e campos de dados
+- `src/app/api/vizu-ai/icones/route.ts` — GET: 48 ícones por categoria com IDs e uso
+- `src/app/api/vizu-ai/fontes/route.ts` — GET: fontes + escala tipográfica recomendada
+
+**Funcionalidades do /execute:**
+- 12 comandos: `criar_apresentacao`, `definir_titulo`, `definir_tema`, `adicionar_slide`, `remover_slide`, `duplicar_slide`, `mover_slide`, `reordenar_slides`, `editar_slide`, `adicionar_elemento`, `editar_elemento`, `remover_elemento`
+- Aliases PT/EN em todos os campos (ex.: `conteudo` = `content`, `titulo` = `title`)
+- 11 posições semânticas: centro, topo, rodapé, col_esquerda, col_direita, etc.
+- Deep merge em `editar_elemento` — só altera campos fornecidos
+- Log de execução por comando + array de erros + HTTP 207 para execução parcial
+
+---
+
+### Documentação de IA (Fases 1, 3 e 4)
+
+**Arquivos criados:**
+- `VIZU_MAP.md` — mapeamento interno completo (modelo de dados, API, coordenadas, layouts, ícones, fontes, persistência, exportação PPTX)
+- `in-vizu.md` — manual cirúrgico para IA (11 seções: propósito, coordenadas, tipos, temas, layouts, comandos, ícones, tipografia, exemplo canônico 8 slides, padrões de qualidade, troubleshooting)
+
+**Arquivos atualizados:**
+- `vizu.md` — adicionada seção de destaque "CONSTRUÇÃO POR IA" no topo, seção VIZU-AI na §5, filelist atualizado
+- `VIZU_CHANGELOG.md` — esta entrada
+
+---
+
 ## [2026-06-21] — V3: Templates, Exportação Multi-formato e Configurações
 
 ### Novos módulos implementados nesta sessão

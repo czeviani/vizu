@@ -1,5 +1,23 @@
 # VIZU
 
+---
+
+## ⚡ CONSTRUÇÃO POR IA — LEIA O `in-vizu.md`
+
+Quando uma IA (Claude Code ou qualquer LLM) estiver construindo uma apresentação no VIZU, **leia e siga integralmente o `in-vizu.md` antes de qualquer ação**.
+
+O `in-vizu.md` contém:
+- Fluxo obrigatório de consulta de API antes de criar slides
+- Sistema de coordenadas do canvas (960×540px, pixels nativos)
+- Referência completa de todos os comandos do endpoint `/api/vizu-ai/execute`
+- Catálogo de ícones, temas, layouts e fontes disponíveis
+- Exemplos canônicos comentados de ponta a ponta
+- Padrões de qualidade e checklist de validação
+
+**Não crie apresentações com base em suposições sobre o schema.** O schema é documentado no `in-vizu.md` e disponível via `GET /api/vizu-ai/schema`.
+
+---
+
 ## 1. DIRETRIZES
 
 **Padrão de escrita:** direto, técnico, sem redundância. Listas > prosa.
@@ -76,6 +94,15 @@ src/
       ai/create/route.ts      ← criar apresentação via spec JSON
       ai/modify/route.ts      ← modificar via operations array
       export/route.ts         ← gerar .pptx binário
+      vizu-ai/
+        execute/route.ts      ← POST: array de comandos (modo IA principal)
+        create/route.ts       ← POST: apresentação completa em JSON único
+        schema/route.ts       ← GET: schema JSON completo
+        comandos/route.ts     ← GET: referência de todos os comandos
+        temas/route.ts        ← GET: catálogo de temas com tokens de cor
+        layouts/route.ts      ← GET: catálogo de layouts com elementos
+        icones/route.ts       ← GET: 48 ícones por categoria
+        fontes/route.ts       ← GET: fontes e escala tipográfica
     layout.tsx         ← root layout (Inter, anti-flash script, metadata)
     globals.css        ← design tokens CSS (claro/escuro/auto)
 ```
@@ -374,6 +401,41 @@ Gera `.pptx` binário a partir de um JSON de apresentação.
 ### GET/POST/PUT/DELETE /api/presentations
 
 CRUD em memória servidor-side (não persiste entre deploys). Para uso programático sem browser.
+
+---
+
+### API VIZU-AI — Modo IA (principal)
+
+> Ver `in-vizu.md` para referência completa. Fluxo obrigatório: consultar temas → layouts → icones → executar.
+
+| Método | Endpoint                  | Função                                          |
+|--------|---------------------------|-------------------------------------------------|
+| POST   | /api/vizu-ai/execute      | Executar array de comandos estruturados (PT/EN) |
+| POST   | /api/vizu-ai/create       | Criar apresentação via JSON único               |
+| GET    | /api/vizu-ai/schema       | Schema JSON completo para validação             |
+| GET    | /api/vizu-ai/comandos     | Referência de todos os comandos /execute        |
+| GET    | /api/vizu-ai/temas        | Todos os temas com tokens de cor e recomendações |
+| GET    | /api/vizu-ai/layouts      | Todos os layouts com elementos e campos de dados |
+| GET    | /api/vizu-ai/icones       | 48 ícones por categoria com IDs e uso           |
+| GET    | /api/vizu-ai/fontes       | Fontes disponíveis + escala tipográfica         |
+
+**Exemplo mínimo — /execute:**
+```json
+{
+  "comandos": [
+    { "cmd": "criar_apresentacao", "nome": "Minha Deck", "tema": "midnight" },
+    { "cmd": "adicionar_slide", "layout": "cover", "dados": { "titulo": "Título", "subtitulo": "Sub" } },
+    { "cmd": "adicionar_slide", "layout": "content", "dados": { "titulo": "Conteúdo", "bullets": ["Ponto 1", "Ponto 2"] } },
+    { "cmd": "adicionar_slide", "layout": "closing", "dados": { "titulo": "Obrigado" } }
+  ]
+}
+```
+
+**Comandos disponíveis em /execute:** `criar_apresentacao`, `definir_titulo`, `definir_tema`, `adicionar_slide`, `remover_slide`, `duplicar_slide`, `mover_slide`, `reordenar_slides`, `editar_slide`, `adicionar_elemento`, `editar_elemento`, `remover_elemento`
+
+**Diferença entre /create e /execute:**
+- `/create`: uma chamada, campos em inglês, sem elementos customizados pós-layout
+- `/execute`: array de comandos, campos em PT ou EN, suporta `adicionar_elemento` por slide
 
 ### Workflow típico Claude Code
 
