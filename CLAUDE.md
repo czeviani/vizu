@@ -13,7 +13,7 @@ npm run build
 
 # Deploy (auto via push, mas manual se precisar)
 git add . && git commit -m "..." && git push
-# Vercel detecta push na main e deploya automaticamente em vizu-czeviani.vercel.app
+# Vercel detecta push na main e deploya automaticamente em vizuapp.vercel.app
 ```
 
 ## Workflow obrigatório

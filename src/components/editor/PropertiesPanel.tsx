@@ -6,6 +6,7 @@ import type {
 } from '@/types/slide';
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { t } from '@/lib/i18n';
+import { embedImageAsDataUrl } from '@/lib/imageEmbed';
 
 interface Props {
   presentation: Presentation;
@@ -369,6 +370,10 @@ function ImageProperties({ el, onChange, onUpdate }: {
           <input
             type="text" value={el.src}
             onChange={(e) => upd({ src: e.target.value })}
+            onBlur={async (e) => {
+              const embedded = await embedImageAsDataUrl(e.target.value);
+              if (embedded !== e.target.value) upd({ src: embedded });
+            }}
             placeholder="https://…"
             className="select"
             style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
@@ -592,6 +597,10 @@ function SlideProperties({ slide, onUpdateSlide }: { slide: Slide; onUpdateSlide
           <input
             type="text" value={bg.image ?? ''}
             onChange={(e) => updBg({ image: e.target.value })}
+            onBlur={async (e) => {
+              const embedded = await embedImageAsDataUrl(e.target.value);
+              if (embedded !== e.target.value) updBg({ image: embedded });
+            }}
             placeholder="https://…"
             className="select"
             style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}

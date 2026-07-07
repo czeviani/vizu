@@ -441,7 +441,7 @@ export default function HomePage() {
   const navItems = [
     { icon: <IcoPresentation />, label: 'Apresentações', active: true, badge: presentations.length > 0 ? presentations.length : null, route: null },
     { icon: <IcoLayout />, label: 'Templates', active: false, badge: null, route: '/templates' },
-    { icon: <IcoDownload />, label: 'Exportações', active: false, badge: null, route: '/templates' },
+    { icon: <IcoDownload />, label: 'Exportações', active: false, badge: null, route: '/exportacoes' },
     { icon: <IcoSettings />, label: 'Configurações', active: false, badge: null, route: '/configuracoes' },
   ];
 

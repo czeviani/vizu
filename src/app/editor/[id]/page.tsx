@@ -480,7 +480,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
-        onAddElement={(slideId, el) => addElement(slideId, el)}
+        onAddElement={(slideId, el) => { addElement(slideId, el); setSelectedIds([el.id]); }}
         onUpdateElement={(elId, updater) => {
           if (activeSlide) updateElement(activeSlide.id, elId, updater);
         }}

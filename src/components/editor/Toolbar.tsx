@@ -6,6 +6,7 @@ import type { Presentation, SlideElement, TextElement, ShapeElement, IconElement
 import { ExportModal } from './ExportModal';
 import { ICON_NAMES, ICON_PATHS } from '@/lib/iconPaths';
 import { t } from '@/lib/i18n';
+import { embedImageAsDataUrl } from '@/lib/imageEmbed';
 import { ContextToolbar } from './ContextToolbar';
 
 interface Props {
@@ -244,9 +245,12 @@ export function Toolbar({
       },
     } as TextElement);
 
-  const addImageFromSrc = (src: string, name = 'Imagem') => {
+  const addImageFromSrc = async (src: string, name = 'Imagem') => {
+    // URLs externas são embutidas em base64 aqui para que o slide fique estável
+    // (independente do host remoto) e o export .pptx traga a imagem de fato.
+    const embedded = await embedImageAsDataUrl(src);
     add({
-      id: uuid(), type: 'image', src, alt: name, objectFit: 'cover',
+      id: uuid(), type: 'image', src: embedded, alt: name, objectFit: 'cover',
       x: 200, y: 130, width: 400, height: 240,
       rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
       border: { width: 0, color: '', style: 'none', radius: 0 },

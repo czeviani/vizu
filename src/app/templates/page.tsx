@@ -671,8 +671,8 @@ export default function TemplatesPage() {
   const navItems = [
     { icon: <IcoPresentation />, label: 'Apresentações', active: false, onClick: () => router.push('/') },
     { icon: <IcoLayout />, label: 'Templates', active: true, onClick: () => {} },
-    { icon: <IcoDownload />, label: 'Exportações', active: false, onClick: () => {} },
-    { icon: <IcoSettings />, label: 'Configurações', active: false, onClick: () => {} },
+    { icon: <IcoDownload />, label: 'Exportações', active: false, onClick: () => router.push('/exportacoes') },
+    { icon: <IcoSettings />, label: 'Configurações', active: false, onClick: () => router.push('/configuracoes') },
   ];
 
   return (

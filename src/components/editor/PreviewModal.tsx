@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Presentation, TextElement, ShapeElement } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
+import { t } from '@/lib/i18n';
 
 interface Props {
   presentation: Presentation;
@@ -66,6 +67,7 @@ export function PreviewModal({ presentation, startIndex, onClose }: Props) {
       {/* Slide */}
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
         <div
+          onClick={(e) => { e.stopPropagation(); next(); }}
           style={{
             position: 'relative',
             width: SLIDE_WIDTH,
@@ -73,6 +75,7 @@ export function PreviewModal({ presentation, startIndex, onClose }: Props) {
             ...backgroundStyle,
             overflow: 'hidden',
             borderRadius: 2,
+            cursor: 'pointer',
           }}
         >
           {sorted.map((el) => {
@@ -147,27 +150,28 @@ export function PreviewModal({ presentation, startIndex, onClose }: Props) {
       {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: '#fff' }}>
         <button
-          onClick={prev}
+          onClick={(e) => { e.stopPropagation(); prev(); }}
           disabled={index === 0}
           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '8px 16px', color: '#fff', cursor: 'pointer', opacity: index === 0 ? 0.3 : 1 }}
         >
-          ← Prev
+          {t.preview_prev}
         </button>
         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-          {index + 1} / {presentation.slides.length}
+          {t.preview_counter(index + 1, presentation.slides.length)}
         </span>
         <button
-          onClick={next}
+          onClick={(e) => { e.stopPropagation(); next(); }}
           disabled={index === presentation.slides.length - 1}
           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '8px 16px', color: '#fff', cursor: 'pointer', opacity: index === presentation.slides.length - 1 ? 0.3 : 1 }}
         >
-          Next →
+          {t.preview_next}
         </button>
         <button
-          onClick={onClose}
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          title={t.preview_close}
           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '8px 16px', color: '#fff', cursor: 'pointer', marginLeft: 16 }}
         >
-          ✕ Close
+          ✕ {t.preview_close.split(' ')[0]}
         </button>
       </div>
     </div>

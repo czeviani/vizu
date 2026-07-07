@@ -53,6 +53,27 @@ export function clearExportHistory(): void {
   localStorage.removeItem(HISTORY_KEY);
 }
 
+export function getAllExportHistory(): ExportRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function removeExportRecord(id: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const all: ExportRecord[] = raw ? JSON.parse(raw) : [];
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(all.filter((r) => r.id !== id)));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 /* ── Resolution scale ─────────────────────────────────────── */
 
 export function resolutionScale(quality: '720p' | '1080p' | '1440p'): number {

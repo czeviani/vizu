@@ -193,6 +193,9 @@ export const t = {
 
   // Preview
   preview_close: 'Fechar (Esc)',
+  preview_prev: '← Anterior',
+  preview_next: 'Próximo →',
+  preview_counter: (i: number, n: number) => `${i} / ${n}`,
 
   // Upload
   upload_file_title: 'Selecionar imagem',

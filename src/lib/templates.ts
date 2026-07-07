@@ -117,7 +117,7 @@ function buildCoverElements(d: AISlideSpec['data'], c: Theme['colors'], theme: T
       y: 160,
       width: SLIDE_WIDTH - 160,
       height: 120,
-      content: d.title ?? 'Presentation Title',
+      content: d.title ?? 'Título da Apresentação',
       zIndex: 3,
       style: {
         fontFamily: theme.fonts.heading,
@@ -225,7 +225,7 @@ function buildSectionElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       y: SLIDE_HEIGHT / 2 - 60,
       width: SLIDE_WIDTH - 160,
       height: 120,
-      content: d.title ?? 'Section Title',
+      content: d.title ?? 'Título da Seção',
       zIndex: 2,
       style: {
         fontFamily: theme.fonts.heading,
@@ -292,7 +292,7 @@ function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       y: 52,
       width: SLIDE_WIDTH - 176,
       height: 52,
-      content: d.title ?? 'Slide Title',
+      content: d.title ?? 'Título do Slide',
       zIndex: 2,
       style: {
         fontFamily: theme.fonts.heading,
@@ -418,7 +418,7 @@ function buildComparisonElements(d: AISlideSpec['data'], c: Theme['colors'], the
       y: 124,
       width: half - 92,
       height: 48,
-      content: d.leftTitle ?? 'Option A',
+      content: d.leftTitle ?? 'Opção A',
       zIndex: 3,
       style: {
         fontFamily: theme.fonts.heading,
@@ -494,7 +494,7 @@ function buildComparisonElements(d: AISlideSpec['data'], c: Theme['colors'], the
       y: 124,
       width: half - 92,
       height: 48,
-      content: d.rightTitle ?? 'Option B',
+      content: d.rightTitle ?? 'Opção B',
       zIndex: 3,
       style: {
         fontFamily: theme.fonts.heading,
@@ -567,7 +567,7 @@ function buildQuoteElements(d: AISlideSpec['data'], c: Theme['colors'], theme: T
       y: SLIDE_HEIGHT / 2 - 100,
       width: SLIDE_WIDTH - 200,
       height: 160,
-      content: `"${d.quote ?? 'Insert your quote here.'}"`,
+      content: `"${d.quote ?? 'Insira sua citação aqui.'}"`,
       zIndex: 2,
       style: {
         fontFamily: theme.fonts.heading,
@@ -636,7 +636,7 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       y: 160,
       width: SLIDE_WIDTH - 160,
       height: 120,
-      content: d.title ?? 'Thank You',
+      content: d.title ?? 'Obrigado',
       zIndex: 2,
       style: {
         fontFamily: theme.fonts.heading,
@@ -691,18 +691,18 @@ export function createBlankSlide(): Slide {
 export function createSlideFromLayout(layout: LayoutType, theme: Theme): Slide {
   const defaultData: Record<LayoutType, AISlideSpec['data']> = {
     blank: {},
-    cover: { title: 'Presentation Title', subtitle: 'Your subtitle here', author: 'Author Name' },
-    section: { title: 'Section Title', subtitle: 'Section subtitle' },
-    content: { title: 'Slide Title', bullets: ['First point', 'Second point', 'Third point'] },
+    cover: { title: 'Título da Apresentação', subtitle: 'Seu subtítulo aqui', author: 'Nome do Autor' },
+    section: { title: 'Título da Seção', subtitle: 'Subtítulo da seção' },
+    content: { title: 'Título do Slide', bullets: ['Primeiro ponto', 'Segundo ponto', 'Terceiro ponto'] },
     comparison: {
-      title: 'Comparison',
-      leftTitle: 'Option A',
-      leftContent: 'First point\nSecond point\nThird point',
-      rightTitle: 'Option B',
-      rightContent: 'First point\nSecond point\nThird point',
+      title: 'Comparação',
+      leftTitle: 'Opção A',
+      leftContent: 'Primeiro ponto\nSegundo ponto\nTerceiro ponto',
+      rightTitle: 'Opção B',
+      rightContent: 'Primeiro ponto\nSegundo ponto\nTerceiro ponto',
     },
-    quote: { quote: 'The only way to do great work is to love what you do.', attribution: 'Steve Jobs' },
-    closing: { title: 'Thank You', subtitle: 'Questions?' },
+    quote: { quote: 'A única forma de fazer um ótimo trabalho é amar o que você faz.', attribution: 'Steve Jobs' },
+    closing: { title: 'Obrigado', subtitle: 'Perguntas?' },
   };
 
   return buildSlideFromSpec({ layout, data: defaultData[layout] }, theme);
