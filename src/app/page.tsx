@@ -7,6 +7,7 @@ import { storage } from '@/lib/storage';
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { createSlideFromLayout } from '@/lib/templates';
 import { SlideMiniature } from '@/components/editor/SlideMiniature';
+import { NewPresentationWizard } from '@/components/NewPresentationWizard';
 import { t } from '@/lib/i18n';
 
 function formatDate(iso: string) {
@@ -20,6 +21,9 @@ function IcoPresentation() {
 }
 function IcoPlus() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>;
+}
+function IcoSparkle() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>;
 }
 function IcoSearch() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
@@ -371,6 +375,7 @@ export default function HomePage() {
   const [presentations, setPresentations] = useState<Presentation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [showAIWizard, setShowAIWizard] = useState(false);
   const [newTitle, setNewTitle] = useState('Nova Apresentação');
   const [newThemeId, setNewThemeId] = useState('slate');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -490,7 +495,7 @@ export default function HomePage() {
         </div>
 
         {/* Nova apresentação */}
-        <div style={{ padding: '12px 12px 8px' }}>
+        <div style={{ padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button
             onClick={() => setShowNew(true)}
             title={sidebarCollapsed ? 'Nova Apresentação' : undefined}
@@ -506,6 +511,21 @@ export default function HomePage() {
           >
             <IcoPlus />
             {!sidebarCollapsed && 'Nova Apresentação'}
+          </button>
+          <button
+            onClick={() => setShowAIWizard(true)}
+            title={sidebarCollapsed ? 'Gerar com IA' : undefined}
+            className="btn btn-ghost"
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              padding: sidebarCollapsed ? '8px' : undefined,
+              minWidth: 0,
+              fontSize: 12.5,
+            }}
+          >
+            <IcoSparkle />
+            {!sidebarCollapsed && 'Gerar com IA'}
           </button>
         </div>
 
@@ -803,11 +823,24 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button onClick={() => setShowNew(false)} className="btn btn-ghost">{t.btn_cancel}</button>
-            <button onClick={handleCreate} className="btn btn-primary">{t.btn_create}</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => { setShowNew(false); setShowAIWizard(true); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 12.5, fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <IcoSparkle />
+              Prefere colar dados e gerar com IA?
+            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowNew(false)} className="btn btn-ghost">{t.btn_cancel}</button>
+              <button onClick={handleCreate} className="btn btn-primary">{t.btn_create}</button>
+            </div>
           </div>
         </Modal>
+      )}
+
+      {showAIWizard && (
+        <NewPresentationWizard onClose={() => setShowAIWizard(false)} showToast={showToast} />
       )}
 
       {/* ── Modal: Confirmar Exclusão ────────────────────────── */}
