@@ -7,6 +7,7 @@ import { ExportModal } from './ExportModal';
 import { ICON_NAMES, ICON_PATHS } from '@/lib/iconPaths';
 import { t } from '@/lib/i18n';
 import { embedImageAsDataUrl } from '@/lib/imageEmbed';
+import { nextZIndex, cascadeOffset } from '@/lib/elementDefaults';
 import { ContextToolbar } from './ContextToolbar';
 
 interface Props {
@@ -220,6 +221,8 @@ export function Toolbar({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeElements = presentation.slides.find((s) => s.id === activeSlideId)?.elements ?? [];
+
   const add = useCallback(
     (el: SlideElement) => {
       if (!activeSlideId) return;
@@ -228,11 +231,12 @@ export function Toolbar({
     [activeSlideId, onAddElement]
   );
 
-  const addText = () =>
+  const addText = () => {
+    const offset = cascadeOffset(activeElements);
     add({
       id: uuid(), type: 'text',
-      x: 200, y: 180, width: 320, height: 80,
-      rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+      x: 200 + offset, y: 180 + offset, width: 320, height: 80,
+      rotation: 0, opacity: 1, zIndex: nextZIndex(activeElements), locked: false, visible: true,
       content: 'Texto',
       background: 'transparent',
       border: { width: 0, color: 'transparent', style: 'none', radius: 0 },
@@ -244,15 +248,17 @@ export function Toolbar({
         textAlign: 'left', lineHeight: 1.4, letterSpacing: 0, textTransform: 'none',
       },
     } as TextElement);
+  };
 
   const addImageFromSrc = async (src: string, name = 'Imagem') => {
     // URLs externas são embutidas em base64 aqui para que o slide fique estável
     // (independente do host remoto) e o export .pptx traga a imagem de fato.
     const embedded = await embedImageAsDataUrl(src);
+    const offset = cascadeOffset(activeElements);
     add({
       id: uuid(), type: 'image', src: embedded, alt: name, objectFit: 'cover',
-      x: 200, y: 130, width: 400, height: 240,
-      rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+      x: 200 + offset, y: 130 + offset, width: 400, height: 240,
+      rotation: 0, opacity: 1, zIndex: nextZIndex(activeElements), locked: false, visible: true,
       border: { width: 0, color: '', style: 'none', radius: 0 },
       shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
     } as ImageElement);
@@ -272,21 +278,24 @@ export function Toolbar({
     e.target.value = '';
   };
 
-  const addShape = (shape: ShapeElement['shape']) =>
+  const addShape = (shape: ShapeElement['shape']) => {
+    const offset = cascadeOffset(activeElements);
     add({
       id: uuid(), type: 'shape', shape,
-      x: 200, y: 180, width: 200, height: 120,
-      rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+      x: 200 + offset, y: 180 + offset, width: 200, height: 120,
+      rotation: 0, opacity: 1, zIndex: nextZIndex(activeElements), locked: false, visible: true,
       fill: presentation.theme.colors.primary,
       border: { width: 0, color: '', style: 'none', radius: 4 },
       shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
     } as ShapeElement);
+  };
 
   const addIcon = (iconName: string) => {
+    const offset = cascadeOffset(activeElements);
     add({
       id: uuid(), type: 'icon', iconName,
-      x: 200, y: 180, width: 80, height: 80,
-      rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+      x: 200 + offset, y: 180 + offset, width: 80, height: 80,
+      rotation: 0, opacity: 1, zIndex: nextZIndex(activeElements), locked: false, visible: true,
       color: presentation.theme.colors.primary,
       background: 'transparent',
       border: { width: 0, color: '', style: 'none', radius: 0 },

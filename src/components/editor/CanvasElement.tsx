@@ -10,6 +10,10 @@ import { TableEl } from './elements/TableEl';
 const HANDLE_SIZE = 8;
 const SNAP_THRESHOLD = 8; // px
 
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
 interface SnapLine {
   type: 'h' | 'v';
   pos: number;
@@ -152,7 +156,9 @@ export function CanvasElement({
           onSnapLines?.(snapped.lines);
         }
 
-        onUpdate({ x: nx, y: ny });
+        // Arredonda para 1 casa decimal: evita cadeias de decimais longas
+        // (ex. x: 108.57142857142857) que causam drift visual e diffs enormes.
+        onUpdate({ x: round1(nx), y: round1(ny) });
       };
 
       const onUp = () => {
@@ -189,7 +195,7 @@ export function CanvasElement({
         if (handle.includes('w')) { x = r.x + dx; w = Math.max(24, r.w - dx); }
         if (handle.includes('n')) { y = r.y + dy; h = Math.max(16, r.h - dy); }
 
-        onUpdate({ x, y, width: w, height: h });
+        onUpdate({ x: round1(x), y: round1(y), width: round1(w), height: round1(h) });
       };
 
       const onUp = () => {

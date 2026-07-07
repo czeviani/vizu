@@ -124,7 +124,7 @@ function alignElements(
     if (type === 'top') y = minY;
     if (type === 'centerV') y = midY - el.height / 2;
     if (type === 'bottom') y = maxY - el.height;
-    onUpdateElement(el.id, (e) => ({ ...e, x, y }));
+    onUpdateElement(el.id, (e) => ({ ...e, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }));
   });
 }
 
@@ -142,7 +142,7 @@ function distributeElements(
     const gap = (endX - startX - totalWidth) / (sorted.length - 1);
     let currentX = startX;
     sorted.forEach(el => {
-      onUpdateElement(el.id, (e) => ({ ...e, x: currentX }));
+      onUpdateElement(el.id, (e) => ({ ...e, x: Math.round(currentX * 10) / 10 }));
       currentX += el.width + gap;
     });
   } else {
@@ -153,7 +153,7 @@ function distributeElements(
     const gap = (endY - startY - totalHeight) / (sorted.length - 1);
     let currentY = startY;
     sorted.forEach(el => {
-      onUpdateElement(el.id, (e) => ({ ...e, y: currentY }));
+      onUpdateElement(el.id, (e) => ({ ...e, y: Math.round(currentY * 10) / 10 }));
       currentY += el.height + gap;
     });
   }

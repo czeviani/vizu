@@ -14,6 +14,7 @@ import { PreviewModal } from '@/components/editor/PreviewModal';
 import { ContextMenu } from '@/components/editor/ContextMenu';
 import type { ContextMenuItem } from '@/components/editor/ContextMenu';
 import { t } from '@/lib/i18n';
+import { nextZIndex, cascadeOffset } from '@/lib/elementDefaults';
 
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -111,11 +112,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           reader.onload = (ev) => {
             const src = ev.target?.result as string;
             if (!src) return;
+            const offset = cascadeOffset(activeSlide.elements);
             const imgEl: ImageElement = {
               id: uuid(), type: 'image', src, alt: 'Imagem colada',
               objectFit: 'cover',
-              x: 200, y: 130, width: 400, height: 240,
-              rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+              x: 200 + offset, y: 130 + offset, width: 400, height: 240,
+              rotation: 0, opacity: 1, zIndex: nextZIndex(activeSlide.elements), locked: false, visible: true,
               border: { width: 0, color: '', style: 'none', radius: 0 },
               shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
             };
@@ -189,11 +191,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       // T — inserir texto
       if ((e.key === 't' || e.key === 'T') && !isInput) {
         if (slide) {
+          const offset = cascadeOffset(slide.elements);
           const newEl = {
             id: uuid(), type: 'text' as const,
             content: 'Clique para editar',
-            x: 320, y: 230, width: 320, height: 80,
-            rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+            x: 320 + offset, y: 230 + offset, width: 320, height: 80,
+            rotation: 0, opacity: 1, zIndex: nextZIndex(slide.elements), locked: false, visible: true,
             style: {
               fontFamily: 'Inter', fontSize: 24, fontWeight: 400,
               fontStyle: 'normal' as const, textDecoration: 'none' as const,
@@ -214,14 +217,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       // R — inserir retângulo
       if ((e.key === 'r' || e.key === 'R') && !isInput) {
         if (slide) {
+          const offset = cascadeOffset(slide.elements);
           const newEl = {
             id: uuid(), type: 'shape' as const,
             shape: 'rectangle' as const,
             fill: '#6d5ae6',
             border: { width: 0, color: 'transparent', style: 'none' as const, radius: 8 },
             shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
-            x: 280, y: 190, width: 400, height: 160,
-            rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+            x: 280 + offset, y: 190 + offset, width: 400, height: 160,
+            rotation: 0, opacity: 1, zIndex: nextZIndex(slide.elements), locked: false, visible: true,
           };
           addEl(slide.id, newEl);
           setSelectedIds([newEl.id]);
@@ -290,11 +294,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           shortcut: 'T',
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>,
           action: () => {
+            const offset = cascadeOffset(activeSlide.elements);
             const newEl = {
               id: uuid(), type: 'text' as const,
               content: 'Clique para editar',
-              x: 320, y: 230, width: 320, height: 80,
-              rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+              x: 320 + offset, y: 230 + offset, width: 320, height: 80,
+              rotation: 0, opacity: 1, zIndex: nextZIndex(activeSlide.elements), locked: false, visible: true,
               style: {
                 fontFamily: 'Inter', fontSize: 24, fontWeight: 400,
                 fontStyle: 'normal' as const, textDecoration: 'none' as const,
@@ -316,14 +321,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           shortcut: 'R',
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>,
           action: () => {
+            const offset = cascadeOffset(activeSlide.elements);
             const newEl = {
               id: uuid(), type: 'shape' as const,
               shape: 'rectangle' as const,
               fill: '#6d5ae6',
               border: { width: 0, color: 'transparent', style: 'none' as const, radius: 8 },
               shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
-              x: 280, y: 190, width: 400, height: 160,
-              rotation: 0, opacity: 1, zIndex: 10, locked: false, visible: true,
+              x: 280 + offset, y: 190 + offset, width: 400, height: 160,
+              rotation: 0, opacity: 1, zIndex: nextZIndex(activeSlide.elements), locked: false, visible: true,
             };
             addElement(activeSlide.id, newEl);
             setSelectedIds([newEl.id]);

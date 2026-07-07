@@ -794,7 +794,7 @@ export function PropertiesPanel({
       else if (type === 'top') y = minY;
       else if (type === 'centerV') y = midY - elem.height / 2;
       else if (type === 'bottom') y = maxY - elem.height;
-      onUpdateElement(elem.id, (e) => ({ ...e, x, y }));
+      onUpdateElement(elem.id, (e) => ({ ...e, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }));
     });
   };
 
@@ -809,7 +809,7 @@ export function PropertiesPanel({
       const gap = (end - start - totalW) / (sorted.length - 1);
       let cur = start;
       sorted.forEach((elem) => {
-        onUpdateElement(elem.id, (e) => ({ ...e, x: cur }));
+        onUpdateElement(elem.id, (e) => ({ ...e, x: Math.round(cur * 10) / 10 }));
         cur += elem.width + gap;
       });
     } else {
@@ -820,7 +820,7 @@ export function PropertiesPanel({
       const gap = (end - start - totalH) / (sorted.length - 1);
       let cur = start;
       sorted.forEach((elem) => {
-        onUpdateElement(elem.id, (e) => ({ ...e, y: cur }));
+        onUpdateElement(elem.id, (e) => ({ ...e, y: Math.round(cur * 10) / 10 }));
         cur += elem.height + gap;
       });
     }
