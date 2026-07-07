@@ -1,6 +1,7 @@
 'use client';
 import type { SlideElement, TextElement, ShapeElement, ImageElement, IconElement } from '@/types/slide';
 import { t } from '@/lib/i18n';
+import { PPTX_SAFE_FONTS } from '@/lib/fontMap';
 
 interface Props {
   elements: SlideElement[];
@@ -9,7 +10,8 @@ interface Props {
   onDuplicateElement?: (id: string) => void;
 }
 
-const FONTS = ['Inter', 'Manrope', 'Georgia', 'Times New Roman', 'Arial', 'Helvetica Neue', 'Courier New'];
+// Restrito às fontes com fallback seguro no PPTX (§4.7 do PPTX-SPEC).
+const FONTS = PPTX_SAFE_FONTS;
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96];
 
 function Sep() {

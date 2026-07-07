@@ -7,6 +7,7 @@ import type {
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { t } from '@/lib/i18n';
 import { embedImageAsDataUrl } from '@/lib/imageEmbed';
+import { PPTX_SAFE_FONTS } from '@/lib/fontMap';
 
 interface Props {
   presentation: Presentation;
@@ -215,12 +216,8 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
       <Section title="Tipografia">
         <Row>
           <PanelLabel>Fonte</PanelLabel>
-          <SelectInput value={el.style.fontFamily} onChange={(v) => updStyle({ fontFamily: v })} options={[
-            { value: 'Inter', label: 'Inter' }, { value: 'Manrope', label: 'Manrope' },
-            { value: 'Georgia', label: 'Georgia' }, { value: 'Times New Roman', label: 'Times New Roman' },
-            { value: 'Arial', label: 'Arial' }, { value: 'Helvetica Neue', label: 'Helvetica Neue' },
-            { value: 'Courier New', label: 'Courier New' },
-          ]} />
+          <SelectInput value={el.style.fontFamily} onChange={(v) => updStyle({ fontFamily: v })}
+            options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
         <Row cols={2}>
           <div>
@@ -667,17 +664,13 @@ function ThemeProperties({ presentation, onSetTheme }: { presentation: Presentat
       <Section title="Tipografia" defaultOpen={false}>
         <Row>
           <PanelLabel>Fonte título</PanelLabel>
-          <SelectInput value={th.fonts.heading} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, heading: v } })} options={[
-            { value: 'Inter', label: 'Inter' }, { value: 'Manrope', label: 'Manrope' },
-            { value: 'Georgia', label: 'Georgia' }, { value: 'Arial', label: 'Arial' },
-          ]} />
+          <SelectInput value={th.fonts.heading} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, heading: v } })}
+            options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
         <Row>
           <PanelLabel>Fonte corpo</PanelLabel>
-          <SelectInput value={th.fonts.body} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, body: v } })} options={[
-            { value: 'Inter', label: 'Inter' }, { value: 'Manrope', label: 'Manrope' },
-            { value: 'Georgia', label: 'Georgia' }, { value: 'Arial', label: 'Arial' },
-          ]} />
+          <SelectInput value={th.fonts.body} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, body: v } })}
+            options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
       </Section>
     </>
