@@ -1,4 +1,4 @@
-import PptxGenJS from 'pptxgenjs';
+import type PptxGenJS from 'pptxgenjs';
 import type {
   Presentation, Slide,
   TextElement, ImageElement, ShapeElement, LineElement, IconElement, TableElement, ChartElement,
@@ -323,6 +323,7 @@ async function processSlide(pptx: PptxGenJS, slide: Slide) {
 }
 
 export async function exportToPptx(presentation: Presentation): Promise<Blob> {
+  const { default: PptxGenJS } = await import('pptxgenjs');
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'VIZU', width: 10, height: 5.625 });
   pptx.layout = 'VIZU';

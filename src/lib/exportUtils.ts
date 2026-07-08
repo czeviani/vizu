@@ -1,6 +1,4 @@
 import type { RefObject } from 'react';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import type { Presentation } from '@/types/slide';
 import { exportToPptx } from '@/lib/pptxExport';
 
@@ -112,6 +110,7 @@ export async function exportAsPng(
   quality: '720p' | '1080p' | '1440p',
   onProgress?: (current: number, total: number) => void,
 ): Promise<void> {
+  const { toPng } = await import('html-to-image');
   const scale = resolutionScale(quality);
   const total = slideRefs.length;
 
@@ -146,6 +145,11 @@ export async function exportAsPdf(
   // 960×540 px → points: 1px = 0.75pt → 720×405 pt = 10in × 5.625in
   const W_PT = 720;
   const H_PT = 405;
+
+  const [{ toPng }, { jsPDF }] = await Promise.all([
+    import('html-to-image'),
+    import('jspdf'),
+  ]);
 
   const pdf = new jsPDF({
     orientation: 'landscape',
