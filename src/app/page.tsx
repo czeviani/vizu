@@ -8,6 +8,7 @@ import { DEFAULT_THEMES } from '@/lib/themes';
 import { createSlideFromLayout } from '@/lib/templates';
 import { SlideMiniature } from '@/components/editor/SlideMiniature';
 import { NewPresentationWizard } from '@/components/NewPresentationWizard';
+import { Onboarding } from '@/components/Onboarding';
 import { t } from '@/lib/i18n';
 
 function formatDate(iso: string) {
@@ -497,6 +498,7 @@ export default function HomePage() {
         {/* Nova apresentação */}
         <div style={{ padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button
+            data-onboarding="new-presentation"
             onClick={() => setShowNew(true)}
             title={sidebarCollapsed ? 'Nova Apresentação' : undefined}
             className="btn btn-primary"
@@ -513,6 +515,7 @@ export default function HomePage() {
             {!sidebarCollapsed && 'Nova Apresentação'}
           </button>
           <button
+            data-onboarding="ai-wizard"
             onClick={() => setShowAIWizard(true)}
             title={sidebarCollapsed ? 'Gerar com IA' : undefined}
             className="btn btn-ghost"
@@ -540,6 +543,7 @@ export default function HomePage() {
           {navItems.map((item) => (
             <button
               key={item.label}
+              data-onboarding={item.label === 'Templates' ? 'templates-nav' : undefined}
               title={sidebarCollapsed ? item.label : undefined}
               className={`nav-item${item.active ? ' active' : ''}`}
               onClick={() => item.route && router.push(item.route)}
@@ -860,6 +864,7 @@ export default function HomePage() {
       )}
 
       <ToastContainer toasts={toasts} onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+      <Onboarding />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { getSettings, saveSettings, DEFAULT_SETTINGS } from '@/lib/settingsStorage';
 import type { VisuSettings } from '@/lib/settingsStorage';
+import { resetOnboarding } from '@/components/Onboarding';
 
 /* ── Icon components ──────────────────────────────────────────── */
 function IcoPresentation() {
@@ -648,6 +649,21 @@ export default function ConfiguracoesPage() {
                   })}
                 </div>
               </div>
+            </section>
+
+            {/* ── Ajuda ─────────────────────────────────────── */}
+            <section style={{ marginBottom: 40 }}>
+              <SectionHeader title="Ajuda" />
+
+              <FieldRow label="Tour de boas-vindas" description="Reveja a introdução rápida às principais funções da Vizu.">
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 13 }}
+                  onClick={() => { resetOnboarding(); router.push('/'); }}
+                >
+                  Reiniciar tour
+                </button>
+              </FieldRow>
             </section>
 
             {/* ── Atalhos de Teclado ────────────────────────── */}
