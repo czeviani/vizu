@@ -6,7 +6,7 @@ import { getThemeById } from '@/lib/themes';
 export interface VisuTemplate {
   id: string;
   name: string;
-  category: 'Negócios' | 'Educação' | 'Criativo' | 'Minimalista';
+  category: 'Negócios' | 'Educação' | 'Criativo' | 'Minimalista' | 'Institucional';
   slides: Slide[];
   themeId: string;
   isBuiltIn: boolean;
@@ -685,6 +685,97 @@ const onePageLimpo = (): VisuTemplate => {
   };
 };
 
+// ── Institucional ───────────────────────────────────────────────
+
+const institucionalGerdau = (): VisuTemplate => {
+  const theme = getThemeById('gerdau');
+  return {
+    id: 'builtin-institucional-gerdau',
+    name: 'Institucional Gerdau',
+    category: 'Institucional',
+    themeId: 'gerdau',
+    isBuiltIn: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    slides: [
+      buildSlideFromSpec({
+        layout: 'cover',
+        data: {
+          title: 'Apresentação Institucional',
+          subtitle: 'Gerdau — Aço para o desenvolvimento sustentável',
+          author: 'Comunicação Corporativa · 2026',
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'content',
+        data: {
+          title: 'Agenda',
+          bullets: [
+            'Quem somos',
+            'Nossa jornada e presença global',
+            'Resultados do período',
+            'Nós vs. mercado',
+            'Compromisso com a sustentabilidade',
+            'Próximos passos',
+          ],
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'section',
+        data: { title: '01 · Quem Somos', subtitle: 'Mais de 120 anos construindo o futuro' },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'content',
+        data: {
+          title: 'Quem Somos',
+          bullets: [
+            'Uma das maiores produtoras de aço das Américas',
+            'Presença industrial em mais de 10 países',
+            'Mais de 30 mil colaboradores comprometidos com a excelência',
+            'Líder em reciclagem de sucata metálica na América Latina',
+          ],
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'section',
+        data: { title: '02 · Resultados', subtitle: 'Desempenho do período' },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'content',
+        data: {
+          title: 'Resultados do Período',
+          bullets: [
+            'Receita líquida em crescimento consistente',
+            'EBITDA ajustado acima do guidance',
+            'Redução de emissões de CO2 por tonelada produzida',
+            'Investimentos recordes em inovação e descarbonização',
+          ],
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'comparison',
+        data: {
+          title: 'Nós vs. Mercado',
+          leftTitle: 'Gerdau',
+          leftContent: 'Produção verticalizada\nAço com maior teor reciclado\nPresença em 10+ países\nInvestimento contínuo em ESG',
+          rightTitle: 'Média do Setor',
+          rightContent: 'Cadeia fragmentada\nMenor índice de reciclagem\nPresença regional limitada\nESG como iniciativa pontual',
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'quote',
+        data: {
+          quote: 'Aço é a base do desenvolvimento. Nosso compromisso é construir esse futuro de forma sustentável.',
+          attribution: 'Liderança Executiva Gerdau',
+        },
+      }, theme),
+      buildSlideFromSpec({
+        layout: 'closing',
+        data: { title: 'Obrigado', subtitle: 'contato@gerdau.com · gerdau.com' },
+      }, theme),
+    ],
+  };
+};
+
 // ── Array de templates embutidos ─────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: VisuTemplate[] = [
@@ -700,6 +791,7 @@ export const BUILT_IN_TEMPLATES: VisuTemplate[] = [
   reuniaoExecutiva(),
   statusReport(),
   onePageLimpo(),
+  institucionalGerdau(),
 ];
 
 // ── localStorage helpers ─────────────────────────────────────────

@@ -91,6 +91,21 @@ export const DEFAULT_THEMES: Theme[] = [
     },
     fonts: { heading: 'Inter', body: 'Inter' },
   },
+  {
+    id: 'gerdau',
+    name: 'Gerdau',
+    colors: {
+      primary: '#003DA5',
+      secondary: '#4A5568',
+      accent: '#FFC72C',
+      background: '#F7F6F2',
+      surface: '#FFFFFF',
+      text: '#0A1A33',
+      textSecondary: '#4A5568',
+      border: 'rgba(10,26,51,0.14)',
+    },
+    fonts: { heading: 'Archivo', body: 'Archivo' },
+  },
 ];
 
 export const getThemeById = (id: string): Theme =>

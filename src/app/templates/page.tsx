@@ -10,17 +10,18 @@ import { getThemeById } from '@/lib/themes';
 
 // ── Tipos ─────────────────────────────────────────────────────────
 
-type Category = 'Todos' | 'Negócios' | 'Educação' | 'Criativo' | 'Minimalista';
+type Category = 'Todos' | 'Negócios' | 'Educação' | 'Criativo' | 'Minimalista' | 'Institucional';
 
-const CATEGORIES: Category[] = ['Todos', 'Negócios', 'Educação', 'Criativo', 'Minimalista'];
+const CATEGORIES: Category[] = ['Todos', 'Negócios', 'Educação', 'Criativo', 'Minimalista', 'Institucional'];
 
 // ── Cores por categoria ───────────────────────────────────────────
 
 const CATEGORY_COLOR: Record<string, { bg: string; color: string }> = {
-  'Negócios':    { bg: 'var(--info-soft)',    color: 'var(--info)' },
-  'Educação':    { bg: 'var(--ok-soft)',      color: 'var(--ok)' },
-  'Criativo':    { bg: 'var(--bad-soft)',     color: 'var(--bad)' },
-  'Minimalista': { bg: 'var(--neutral-soft)', color: 'var(--text-3)' },
+  'Negócios':      { bg: 'var(--info-soft)',    color: 'var(--info)' },
+  'Educação':      { bg: 'var(--ok-soft)',      color: 'var(--ok)' },
+  'Criativo':      { bg: 'var(--bad-soft)',     color: 'var(--bad)' },
+  'Minimalista':   { bg: 'var(--neutral-soft)', color: 'var(--text-3)' },
+  'Institucional': { bg: 'var(--info-soft)',    color: 'var(--info)' },
 };
 
 // ── Ícones ────────────────────────────────────────────────────────
