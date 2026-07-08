@@ -20,9 +20,19 @@ git add . && git commit -m "..." && git push
 
 1. Editar código
 2. `npm run build` — verificar sem erros TS
-3. `git add <arquivos>` (específicos, nunca `git add -A`)
-4. `git commit -m "tipo: descrição"`
-5. `git push` → Vercel deploya automaticamente
+3. `npm run test` — suíte de fidelidade PPTX (`tests/pptx-fidelity/`); rodar sempre que mexer em `pptxExport.ts`, `templates.ts` ou `themes.ts`
+4. `git add <arquivos>` (específicos, nunca `git add -A`)
+5. `git commit -m "tipo: descrição"`
+6. `git push` → Vercel deploya automaticamente
+
+## Testes de fidelidade PPTX
+
+`tests/pptx-fidelity/` (vitest) valida o exporter contra `docs/PPTX-SPEC.md` (§4 do plano):
+posição/tamanho em EMU (±0.02"), rotação, opacidade, z-order, bullets nativos, notas do
+apresentador, fundos, embed de imagem/ícone como bytes reais, tabela/gráfico nativos e o tema
+Gerdau. `iconToDataUrl` é mockado nos testes (usa `document.createElement('canvas')`, indisponível
+em Node). O teste de fidelidade visual (SSIM via LibreOffice) só roda se `soffice` estiver
+disponível no PATH — nesta VPS não está, então fica `skipped`.
 
 ## Regras críticas
 
