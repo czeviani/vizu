@@ -6,6 +6,7 @@ import { ShapeEl } from './elements/ShapeEl';
 import { ImageEl } from './elements/ImageEl';
 import { IconEl } from './elements/IconEl';
 import { TableEl } from './elements/TableEl';
+import { ChartEl } from './elements/ChartEl';
 
 const HANDLE_SIZE = 8;
 const SNAP_THRESHOLD = 8; // px
@@ -259,6 +260,7 @@ export function CanvasElement({
       {el.type === 'image' && <ImageEl element={el as never} />}
       {el.type === 'icon' && <IconEl element={el as never} />}
       {el.type === 'table' && <TableEl element={el as never} onUpdate={onUpdate as (props: Record<string, unknown>) => void} />}
+      {el.type === 'chart' && <ChartEl element={el as never} />}
 
       {selected && !el.locked && (
         <>

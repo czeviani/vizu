@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import type {
   Slide, SlideElement, TextElement, ShapeElement,
-  ImageElement, IconElement, TableElement, TableCell, Theme, Presentation,
+  ImageElement, IconElement, TableElement, TableCell, ChartElement, Theme, Presentation,
 } from '@/types/slide';
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { t } from '@/lib/i18n';
@@ -572,6 +572,81 @@ function TableProperties({ el, onChange }: { el: TableElement; onChange: (u: (e:
         <div><PanelLabel>Cor zebrada</PanelLabel><ColorSwatch value={el.alternateColor} onChange={(v) => upd({ alternateColor: v })} /></div>
       </Row>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Dê duplo clique numa célula no canvas para editar o texto.</div>
+    </Section>
+  );
+}
+
+function ChartProperties({ el, onChange }: { el: ChartElement; onChange: (u: (e: SlideElement) => SlideElement) => void }) {
+  const upd = (props: Partial<ChartElement>) => onChange((e) => ({ ...e, ...props } as ChartElement));
+  const series = el.series[0] ?? { name: 'Série 1', values: [] };
+
+  const setPoint = (i: number, field: 'label' | 'value', val: string) => {
+    if (field === 'label') {
+      const labels = el.labels.map((l, idx) => (idx === i ? val : l));
+      upd({ labels });
+    } else {
+      const values = series.values.map((v, idx) => (idx === i ? Number(val) || 0 : v));
+      upd({ series: [{ ...series, values }, ...el.series.slice(1)] });
+    }
+  };
+
+  const addPoint = () => {
+    upd({
+      labels: [...el.labels, `Item ${el.labels.length + 1}`],
+      series: [{ ...series, values: [...series.values, 0] }, ...el.series.slice(1)],
+    });
+  };
+
+  const removePoint = (i: number) => {
+    if (el.labels.length <= 1) return;
+    upd({
+      labels: el.labels.filter((_, idx) => idx !== i),
+      series: [{ ...series, values: series.values.filter((_, idx) => idx !== i) }, ...el.series.slice(1)],
+    });
+  };
+
+  return (
+    <Section title="Gráfico">
+      <Row>
+        <PanelLabel>Tipo</PanelLabel>
+        <SelectInput value={el.chartType} onChange={(v) => upd({ chartType: v as ChartElement['chartType'] })} options={[
+          { value: 'bar', label: 'Barras' }, { value: 'line', label: 'Linha' }, { value: 'pie', label: 'Pizza' },
+        ]} />
+      </Row>
+      <Row>
+        <PanelLabel>Título (opcional)</PanelLabel>
+        <input
+          type="text" value={el.title ?? ''} onChange={(e) => upd({ title: e.target.value })}
+          className="select" style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
+        />
+      </Row>
+      <Row>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
+          <input type="checkbox" checked={el.showLegend} onChange={(e) => upd({ showLegend: e.target.checked })} style={{ accentColor: 'var(--accent)', width: 13, height: 13 }} />
+          Mostrar legenda
+        </label>
+      </Row>
+      <Row>
+        <PanelLabel>Dados</PanelLabel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {el.labels.map((label, i) => (
+            <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <input
+                type="text" value={label} onChange={(e) => setPoint(i, 'label', e.target.value)}
+                className="select" style={{ flex: 2, padding: '4px 6px', fontSize: 11.5 }}
+              />
+              <input
+                type="number" value={series.values[i] ?? 0} onChange={(e) => setPoint(i, 'value', e.target.value)}
+                className="select" style={{ flex: 1, padding: '4px 6px', fontSize: 11.5 }}
+              />
+              <button onClick={() => removePoint(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }} title="Remover">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+        <button onClick={addPoint} className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', padding: '5px 0', fontSize: 12, marginTop: 6 }}>+ Ponto</button>
+      </Row>
     </Section>
   );
 }
@@ -1166,7 +1241,7 @@ export function PropertiesPanel({
                 {/* Type indicator */}
                 <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="tag tag-accent" style={{ fontSize: 10.5, padding: '1px 7px' }}>
-                    {el.type === 'text' ? 'Texto' : el.type === 'image' ? 'Imagem' : el.type === 'shape' ? 'Forma' : el.type === 'icon' ? 'Ícone' : 'Tabela'}
+                    {el.type === 'text' ? 'Texto' : el.type === 'image' ? 'Imagem' : el.type === 'shape' ? 'Forma' : el.type === 'icon' ? 'Ícone' : el.type === 'chart' ? 'Gráfico' : 'Tabela'}
                   </span>
                   {el.locked && <span className="tag tag-warn" style={{ fontSize: 10.5, padding: '1px 7px' }}>Bloqueado</span>}
                 </div>
@@ -1183,6 +1258,7 @@ export function PropertiesPanel({
                 {el.type === 'shape' && <ShapeProperties el={el as ShapeElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
                 {el.type === 'icon' && <IconProperties el={el as IconElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
                 {el.type === 'table' && <TableProperties el={el as TableElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
+                {el.type === 'chart' && <ChartProperties el={el as ChartElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
               </>
             )}
           </>

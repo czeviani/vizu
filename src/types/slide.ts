@@ -1,4 +1,4 @@
-export type ElementType = 'text' | 'image' | 'shape' | 'icon' | 'table' | 'line';
+export type ElementType = 'text' | 'image' | 'shape' | 'icon' | 'table' | 'line' | 'chart';
 
 export type LayoutType = 'blank' | 'cover' | 'section' | 'content' | 'comparison' | 'quote' | 'closing';
 
@@ -121,13 +121,31 @@ export interface LineElement extends BaseElement {
   arrowEnd: boolean;
 }
 
+export type ChartType = 'bar' | 'line' | 'pie';
+
+export interface ChartSeries {
+  name: string;
+  values: number[];
+}
+
+export interface ChartElement extends BaseElement {
+  type: 'chart';
+  chartType: ChartType;
+  labels: string[];
+  series: ChartSeries[];
+  colors: string[];
+  showLegend: boolean;
+  title?: string;
+}
+
 export type SlideElement =
   | TextElement
   | ImageElement
   | ShapeElement
   | IconElement
   | TableElement
-  | LineElement;
+  | LineElement
+  | ChartElement;
 
 export interface SlideBackground {
   type: 'color' | 'gradient' | 'image';

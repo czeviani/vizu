@@ -1,7 +1,7 @@
 import PptxGenJS from 'pptxgenjs';
 import type {
   Presentation, Slide,
-  TextElement, ImageElement, ShapeElement, LineElement, IconElement, TableElement,
+  TextElement, ImageElement, ShapeElement, LineElement, IconElement, TableElement, ChartElement,
 } from '@/types/slide';
 import { SLIDE_WIDTH } from '@/types/slide';
 import { iconToDataUrl } from './iconPaths';
@@ -245,6 +245,29 @@ function addTableElement(pptxSlide: PptxGenJS.Slide, el: TableElement) {
   });
 }
 
+function addChartElement(pptxSlide: PptxGenJS.Slide, el: ChartElement) {
+  const chartTypeMap: Record<ChartElement['chartType'], PptxGenJS.CHART_NAME> = {
+    bar: 'bar', line: 'line', pie: 'pie',
+  };
+  const data = el.series.map((s) => ({
+    name: s.name,
+    labels: el.labels,
+    values: s.values,
+  }));
+  pptxSlide.addChart(chartTypeMap[el.chartType], data, {
+    x: px(el.x), y: px(el.y), w: px(el.width), h: px(el.height),
+    chartColors: el.colors,
+    showLegend: el.showLegend,
+    legendPos: 'b',
+    showTitle: !!el.title,
+    title: el.title,
+    titleFontSize: pt(14),
+    showValAxisTitle: false,
+    showCatAxisTitle: false,
+    dataLabelColor: '363636',
+  });
+}
+
 async function processSlide(pptx: PptxGenJS, slide: Slide) {
   const pptxSlide = pptx.addSlide();
 
@@ -284,6 +307,9 @@ async function processSlide(pptx: PptxGenJS, slide: Slide) {
           break;
         case 'table':
           addTableElement(pptxSlide, el as TableElement);
+          break;
+        case 'chart':
+          addChartElement(pptxSlide, el as ChartElement);
           break;
       }
     } catch (e) {
