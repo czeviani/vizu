@@ -258,7 +258,7 @@ export function CanvasElement({
       {el.type === 'shape' && <ShapeEl element={el as never} />}
       {el.type === 'image' && <ImageEl element={el as never} />}
       {el.type === 'icon' && <IconEl element={el as never} />}
-      {el.type === 'table' && <TableEl element={el as never} />}
+      {el.type === 'table' && <TableEl element={el as never} onUpdate={onUpdate as (props: Record<string, unknown>) => void} />}
 
       {selected && !el.locked && (
         <>

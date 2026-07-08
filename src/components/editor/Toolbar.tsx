@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useRouter } from 'next/navigation';
-import type { Presentation, SlideElement, TextElement, ShapeElement, IconElement, ImageElement } from '@/types/slide';
+import type { Presentation, SlideElement, TextElement, ShapeElement, IconElement, ImageElement, TableElement, TableCell } from '@/types/slide';
 import { ExportModal } from './ExportModal';
 import { ICON_NAMES, ICON_PATHS } from '@/lib/iconPaths';
 import { t } from '@/lib/i18n';
@@ -288,6 +288,30 @@ export function Toolbar({
       border: { width: 0, color: '', style: 'none', radius: 4 },
       shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
     } as ShapeElement);
+  };
+
+  const addTable = () => {
+    const offset = cascadeOffset(activeElements);
+    const cols = 3;
+    const rowsCount = 3;
+    const rows: TableCell[][] = Array.from({ length: rowsCount }, (_, r) =>
+      Array.from({ length: cols }, (_, c) => ({
+        content: r === 0 ? `Coluna ${c + 1}` : '',
+        style: {},
+        background: 'transparent',
+      }))
+    );
+    add({
+      id: uuid(), type: 'table', rows,
+      headerRow: true, headerCol: false,
+      borderColor: presentation.theme.colors.border,
+      headerBackground: presentation.theme.colors.primary,
+      headerTextColor: '#ffffff',
+      alternateRowColor: true,
+      alternateColor: presentation.theme.colors.surface,
+      x: 180 + offset, y: 150 + offset, width: 600, height: 220,
+      rotation: 0, opacity: 1, zIndex: nextZIndex(activeElements), locked: false, visible: true,
+    } as TableElement);
   };
 
   const addIcon = (iconName: string) => {
@@ -622,6 +646,14 @@ export function Toolbar({
             </>
           )}
         </div>
+
+        {/* Insert: Table */}
+        <ToolBtn title="Tabela" onClick={addTable} disabled={!activeSlideId}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+          Tabela
+        </ToolBtn>
 
         <Sep />
 

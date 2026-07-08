@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import type {
   Slide, SlideElement, TextElement, ShapeElement,
-  ImageElement, IconElement, Theme, Presentation,
+  ImageElement, IconElement, TableElement, TableCell, Theme, Presentation,
 } from '@/types/slide';
 import { DEFAULT_THEMES } from '@/lib/themes';
 import { t } from '@/lib/i18n';
@@ -517,6 +517,65 @@ function IconProperties({ el, onChange }: { el: IconElement; onChange: (u: (e: S
   );
 }
 
+function TableProperties({ el, onChange }: { el: TableElement; onChange: (u: (e: SlideElement) => SlideElement) => void }) {
+  const upd = (props: Partial<TableElement>) => onChange((e) => ({ ...e, ...props } as TableElement));
+  const cols = el.rows[0]?.length ?? 0;
+  const rowsCount = el.rows.length;
+
+  const emptyCell = (): TableCell => ({ content: '', style: {}, background: 'transparent' });
+
+  const addRow = () => upd({ rows: [...el.rows, Array.from({ length: cols }, emptyCell)] });
+  const removeRow = () => { if (rowsCount > 1) upd({ rows: el.rows.slice(0, -1) }); };
+  const addCol = () => upd({ rows: el.rows.map((row) => [...row, emptyCell()]) });
+  const removeCol = () => { if (cols > 1) upd({ rows: el.rows.map((row) => row.slice(0, -1)) }); };
+
+  return (
+    <Section title="Tabela">
+      <Row>
+        <PanelLabel>Linhas — {rowsCount}</PanelLabel>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={removeRow} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '5px 0', fontSize: 12 }}>− Linha</button>
+          <button onClick={addRow} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '5px 0', fontSize: 12 }}>+ Linha</button>
+        </div>
+      </Row>
+      <Row>
+        <PanelLabel>Colunas — {cols}</PanelLabel>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={removeCol} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '5px 0', fontSize: 12 }}>− Coluna</button>
+          <button onClick={addCol} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '5px 0', fontSize: 12 }}>+ Coluna</button>
+        </div>
+      </Row>
+      <Row>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
+            <input type="checkbox" checked={el.headerRow} onChange={(e) => upd({ headerRow: e.target.checked })} style={{ accentColor: 'var(--accent)', width: 13, height: 13 }} />
+            Cabeçalho (linha)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
+            <input type="checkbox" checked={el.headerCol} onChange={(e) => upd({ headerCol: e.target.checked })} style={{ accentColor: 'var(--accent)', width: 13, height: 13 }} />
+            Cabeçalho (coluna)
+          </label>
+        </div>
+      </Row>
+      <Row>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)' }}>
+          <input type="checkbox" checked={el.alternateRowColor} onChange={(e) => upd({ alternateRowColor: e.target.checked })} style={{ accentColor: 'var(--accent)', width: 13, height: 13 }} />
+          Linhas zebradas
+        </label>
+      </Row>
+      <Row cols={2}>
+        <div><PanelLabel>Cor do cabeçalho</PanelLabel><ColorSwatch value={el.headerBackground} onChange={(v) => upd({ headerBackground: v })} /></div>
+        <div><PanelLabel>Texto do cabeçalho</PanelLabel><ColorSwatch value={el.headerTextColor} onChange={(v) => upd({ headerTextColor: v })} /></div>
+      </Row>
+      <Row cols={2}>
+        <div><PanelLabel>Cor da borda</PanelLabel><ColorSwatch value={el.borderColor} onChange={(v) => upd({ borderColor: v })} /></div>
+        <div><PanelLabel>Cor zebrada</PanelLabel><ColorSwatch value={el.alternateColor} onChange={(v) => upd({ alternateColor: v })} /></div>
+      </Row>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Dê duplo clique numa célula no canvas para editar o texto.</div>
+    </Section>
+  );
+}
+
 function CommonProperties({ el, onChange }: { el: SlideElement; onChange: (u: (e: SlideElement) => SlideElement) => void }) {
   const upd = (props: Partial<SlideElement>) => onChange((e) => ({ ...e, ...props } as SlideElement));
 
@@ -563,6 +622,7 @@ function SlideProperties({ slide, onUpdateSlide }: { slide: Slide; onUpdateSlide
   const updBg = (props: Partial<typeof bg>) => onUpdateSlide((s) => ({ ...s, background: { ...s.background, ...props } }));
 
   return (
+    <>
     <Section title="Fundo do Slide">
       <Row>
         <PanelLabel>Tipo</PanelLabel>
@@ -605,6 +665,16 @@ function SlideProperties({ slide, onUpdateSlide }: { slide: Slide; onUpdateSlide
         </Row>
       )}
     </Section>
+    <Section title="Notas do apresentador" defaultOpen={!!slide.notes}>
+      <textarea
+        value={slide.notes ?? ''}
+        onChange={(e) => onUpdateSlide((s) => ({ ...s, notes: e.target.value }))}
+        placeholder="Notas visíveis apenas para quem apresenta — exportadas como speaker notes no .pptx"
+        className="select"
+        style={{ width: '100%', minHeight: 90, padding: '8px', fontSize: 12.5, lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
+      />
+    </Section>
+    </>
   );
 }
 
@@ -1112,6 +1182,7 @@ export function PropertiesPanel({
                 )}
                 {el.type === 'shape' && <ShapeProperties el={el as ShapeElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
                 {el.type === 'icon' && <IconProperties el={el as IconElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
+                {el.type === 'table' && <TableProperties el={el as TableElement} onChange={(updater) => onUpdateElement(el.id, updater)} />}
               </>
             )}
           </>
