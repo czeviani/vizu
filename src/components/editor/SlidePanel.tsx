@@ -68,7 +68,7 @@ export function SlidePanel({
   /* ── Collapsed state — faixa estreita ────────────────── */
   if (collapsed) {
     return (
-      <aside style={{
+      <aside aria-label="Slides" style={{
         width: 36,
         flexShrink: 0,
         background: 'var(--surface)',
@@ -107,7 +107,7 @@ export function SlidePanel({
   }
 
   return (
-    <aside style={{
+    <aside aria-label="Slides" style={{
       width: 192,
       flexShrink: 0,
       background: 'var(--surface)',
@@ -231,12 +231,17 @@ export function SlidePanel({
             <div
               key={slide.id}
               draggable
+              role="button"
+              tabIndex={0}
+              aria-label={`Slide ${index + 1}${isActive ? ' (selecionado)' : ''}`}
+              aria-current={isActive ? 'true' : undefined}
               onDragStart={(e) => handleDragStart(e, slide.id)}
               onDragOver={(e) => { e.preventDefault(); setDragOver(index); }}
               onDragLeave={() => setDragOver(null)}
               onDrop={(e) => handleDrop(e, index)}
               onContextMenu={(e) => handleContextMenu(e, slide.id)}
               onClick={() => onSelectSlide(index)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlide(index); } }}
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
               style={{

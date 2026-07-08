@@ -68,12 +68,13 @@ function ThemeToggle({ value, onChange }: { value: 'light' | 'dark' | 'auto'; on
 }
 
 /* ── Toggle component ─────────────────────────────────────────── */
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       onClick={() => onChange(!value)}
       role="switch"
       aria-checked={value}
+      aria-label={label}
       style={{
         width: 40,
         height: 22,
@@ -292,8 +293,6 @@ export default function ConfiguracoesPage() {
             style={{
               width: '100%',
               justifyContent: 'center',
-              background: 'var(--sidebar-accent)',
-              borderColor: 'var(--sidebar-accent)',
               padding: sidebarCollapsed ? '8px' : undefined,
               minWidth: 0,
             }}
@@ -460,7 +459,7 @@ export default function ConfiguracoesPage() {
                           borderRadius: 'var(--r-full)',
                           border: `1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
                           background: isActive ? 'var(--accent-soft)' : 'transparent',
-                          color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                          color: isActive ? 'var(--accent-hover)' : 'var(--text-2)',
                           fontSize: 12,
                           fontWeight: isActive ? 600 : 500,
                           cursor: 'pointer',
@@ -478,6 +477,7 @@ export default function ConfiguracoesPage() {
 
               <FieldRow label="Fonte padrão" description="Fonte utilizada por padrão ao inserir novos textos.">
                 <select
+                  aria-label="Fonte padrão"
                   className="select"
                   style={{ width: 180 }}
                   value={settings.defaultFontFamily}
@@ -496,6 +496,7 @@ export default function ConfiguracoesPage() {
 
               <FieldRow label="Autossalvar" description="Intervalo de salvamento automático durante a edição.">
                 <select
+                  aria-label="Autossalvar"
                   className="select"
                   style={{ width: 160 }}
                   value={settings.autosaveInterval}
@@ -514,7 +515,7 @@ export default function ConfiguracoesPage() {
                 description="Mostra a grade de pontos no canvas do editor."
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Toggle value={settings.showGrid} onChange={(v) => update('showGrid', v)} />
+                  <Toggle label="Exibir grade" value={settings.showGrid} onChange={(v) => update('showGrid', v)} />
                   {settings.showGrid && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input
@@ -534,11 +535,11 @@ export default function ConfiguracoesPage() {
               </FieldRow>
 
               <FieldRow label="Snap à grade" description="Encaixa elementos na grade ao mover ou redimensionar.">
-                <Toggle value={settings.snapToGrid} onChange={(v) => update('snapToGrid', v)} />
+                <Toggle label="Snap à grade" value={settings.snapToGrid} onChange={(v) => update('snapToGrid', v)} />
               </FieldRow>
 
               <FieldRow label="Guias inteligentes" description="Exibe linhas de alinhamento ao mover elementos.">
-                <Toggle value={settings.smartGuides} onChange={(v) => update('smartGuides', v)} />
+                <Toggle label="Guias inteligentes" value={settings.smartGuides} onChange={(v) => update('smartGuides', v)} />
               </FieldRow>
 
               <FieldRow label="Unidade de medida" description="Unidade exibida nas propriedades de posição e tamanho.">
@@ -554,7 +555,7 @@ export default function ConfiguracoesPage() {
                           borderRadius: 'var(--r-full)',
                           border: `1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
                           background: isActive ? 'var(--accent-soft)' : 'transparent',
-                          color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                          color: isActive ? 'var(--accent-hover)' : 'var(--text-2)',
                           fontSize: 12,
                           fontWeight: isActive ? 600 : 500,
                           cursor: 'pointer',
@@ -587,7 +588,7 @@ export default function ConfiguracoesPage() {
                           borderRadius: 'var(--r-full)',
                           border: `1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
                           background: isActive ? 'var(--accent-soft)' : 'transparent',
-                          color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                          color: isActive ? 'var(--accent-hover)' : 'var(--text-2)',
                           fontSize: 12,
                           fontWeight: isActive ? 600 : 500,
                           cursor: 'pointer',
@@ -641,7 +642,7 @@ export default function ConfiguracoesPage() {
                             <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
                           ))}
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--accent)' : 'var(--text-2)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--accent-hover)' : 'var(--text-2)' }}>
                           {theme.name}
                         </span>
                       </button>

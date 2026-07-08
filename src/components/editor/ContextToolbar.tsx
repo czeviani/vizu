@@ -244,7 +244,7 @@ export function ContextToolbar({ elements, onUpdateElement, onRemoveElement, onD
         padding: '0 16px',
         height: '100%',
       }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', opacity: 0.6 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
           Selecione um elemento para editar suas propriedades rapidamente
         </span>
       </div>

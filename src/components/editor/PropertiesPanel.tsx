@@ -56,7 +56,7 @@ function Row({ children, cols }: { children: React.ReactNode; cols?: number }) {
   );
 }
 
-function ColorSwatch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function ColorSwatch({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const safeHex = /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : '#000000';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -74,6 +74,7 @@ function ColorSwatch({ value, onChange }: { value: string; onChange: (v: string)
       }}>
         <input
           type="color"
+          aria-label={label}
           value={safeHex}
           onChange={(e) => onChange(e.target.value)}
           style={{ position: 'absolute', inset: '-4px', opacity: 0, width: 'calc(100% + 8px)', height: 'calc(100% + 8px)', cursor: 'pointer' }}
@@ -81,6 +82,7 @@ function ColorSwatch({ value, onChange }: { value: string; onChange: (v: string)
       </div>
       <input
         type="text"
+        aria-label={`${label} (hexadecimal)`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
@@ -121,12 +123,13 @@ function NumInput({ value, onChange, min, max, step = 1, suffix }: {
   );
 }
 
-function SelectInput({ value, onChange, options }: {
+function SelectInput({ value, onChange, options, label }: {
   value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[];
+  label: string;
 }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="select">
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="select" aria-label={label}>
       {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
@@ -216,7 +219,7 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
       <Section title="Tipografia">
         <Row>
           <PanelLabel>Fonte</PanelLabel>
-          <SelectInput value={el.style.fontFamily} onChange={(v) => updStyle({ fontFamily: v })}
+          <SelectInput label="Fonte" value={el.style.fontFamily} onChange={(v) => updStyle({ fontFamily: v })}
             options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
         <Row cols={2}>
@@ -226,7 +229,7 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
           </div>
           <div>
             <PanelLabel>Espessura</PanelLabel>
-            <SelectInput value={String(el.style.fontWeight)} onChange={(v) => updStyle({ fontWeight: Number(v) })} options={[
+            <SelectInput label="Espessura" value={String(el.style.fontWeight)} onChange={(v) => updStyle({ fontWeight: Number(v) })} options={[
               { value: '300', label: 'Leve' }, { value: '400', label: 'Normal' },
               { value: '500', label: 'Médio' }, { value: '600', label: 'Semi' },
               { value: '700', label: 'Negrito' }, { value: '800', label: 'Extra' },
@@ -235,7 +238,7 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
         </Row>
         <Row>
           <PanelLabel>Cor do texto</PanelLabel>
-          <ColorSwatch value={el.style.color} onChange={(v) => updStyle({ color: v })} />
+          <ColorSwatch label="Cor do texto" value={el.style.color} onChange={(v) => updStyle({ color: v })} />
         </Row>
         <Row>
           <PanelLabel>Alinhamento</PanelLabel>
@@ -321,7 +324,7 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
       <Section title="Caixa de texto" defaultOpen={false}>
         <Row>
           <PanelLabel>Fundo</PanelLabel>
-          <ColorSwatch value={el.background} onChange={(v) => upd({ background: v })} />
+          <ColorSwatch label="Fundo" value={el.background} onChange={(v) => upd({ background: v })} />
         </Row>
         <Row cols={2}>
           <div>
@@ -330,7 +333,7 @@ function TextProperties({ el, onChange }: { el: TextElement; onChange: (u: (e: S
           </div>
           <div>
             <PanelLabel>Alinhamento V.</PanelLabel>
-            <SelectInput value={el.verticalAlign} onChange={(v) => upd({ verticalAlign: v as TextElement['verticalAlign'] })} options={[
+            <SelectInput label="Alinhamento vertical" value={el.verticalAlign} onChange={(v) => upd({ verticalAlign: v as TextElement['verticalAlign'] })} options={[
               { value: 'top', label: 'Topo' }, { value: 'middle', label: 'Meio' }, { value: 'bottom', label: 'Base' },
             ]} />
           </div>
@@ -398,7 +401,7 @@ function ImageProperties({ el, onChange, onUpdate }: {
         <Row cols={2}>
           <div>
             <PanelLabel>Ajuste</PanelLabel>
-            <SelectInput value={el.objectFit} onChange={(v) => upd({ objectFit: v as 'cover' | 'contain' | 'fill' })} options={[
+            <SelectInput label="Ajuste" value={el.objectFit} onChange={(v) => upd({ objectFit: v as 'cover' | 'contain' | 'fill' })} options={[
               { value: 'cover', label: 'Cobrir' }, { value: 'contain', label: 'Conter' }, { value: 'fill', label: 'Preencher' },
             ]} />
           </div>
@@ -428,7 +431,7 @@ function ImageProperties({ el, onChange, onUpdate }: {
         {el.border.width > 0 && (
           <Row>
             <PanelLabel>Cor da borda</PanelLabel>
-            <ColorSwatch value={el.border.color || '#000000'} onChange={(v) => upd({ border: { ...el.border, color: v } })} />
+            <ColorSwatch label="Cor da borda" value={el.border.color || '#000000'} onChange={(v) => upd({ border: { ...el.border, color: v } })} />
           </Row>
         )}
       </Section>
@@ -444,7 +447,7 @@ function ShapeProperties({ el, onChange }: { el: ShapeElement; onChange: (u: (e:
       <Section title="Preenchimento">
         <Row>
           <PanelLabel>Cor de preenchimento</PanelLabel>
-          <ColorSwatch value={el.fill} onChange={(v) => upd({ fill: v })} />
+          <ColorSwatch label="Cor de preenchimento" value={el.fill} onChange={(v) => upd({ fill: v })} />
         </Row>
       </Section>
       <Section title="Borda" defaultOpen={false}>
@@ -461,7 +464,7 @@ function ShapeProperties({ el, onChange }: { el: ShapeElement; onChange: (u: (e:
         <Row cols={2}>
           <div>
             <PanelLabel>Estilo</PanelLabel>
-            <SelectInput value={el.border.style} onChange={(v) => upd({ border: { ...el.border, style: v as 'solid' | 'dashed' | 'dotted' | 'none' } })} options={[
+            <SelectInput label="Estilo da borda" value={el.border.style} onChange={(v) => upd({ border: { ...el.border, style: v as 'solid' | 'dashed' | 'dotted' | 'none' } })} options={[
               { value: 'none', label: 'Nenhuma' }, { value: 'solid', label: 'Sólida' },
               { value: 'dashed', label: 'Tracejada' }, { value: 'dotted', label: 'Pontilhada' },
             ]} />
@@ -496,7 +499,7 @@ function ShapeProperties({ el, onChange }: { el: ShapeElement; onChange: (u: (e:
             </Row>
             <Row>
               <PanelLabel>Cor da sombra</PanelLabel>
-              <ColorSwatch value={el.shadow.color} onChange={(v) => upd({ shadow: { ...el.shadow, color: v } })} />
+              <ColorSwatch label="Cor da sombra" value={el.shadow.color} onChange={(v) => upd({ shadow: { ...el.shadow, color: v } })} />
             </Row>
           </>
         )}
@@ -511,7 +514,7 @@ function IconProperties({ el, onChange }: { el: IconElement; onChange: (u: (e: S
     <Section title="Ícone">
       <Row>
         <PanelLabel>Cor</PanelLabel>
-        <ColorSwatch value={el.color} onChange={(v) => upd({ color: v })} />
+        <ColorSwatch label="Cor do ícone" value={el.color} onChange={(v) => upd({ color: v })} />
       </Row>
     </Section>
   );
@@ -564,12 +567,12 @@ function TableProperties({ el, onChange }: { el: TableElement; onChange: (u: (e:
         </label>
       </Row>
       <Row cols={2}>
-        <div><PanelLabel>Cor do cabeçalho</PanelLabel><ColorSwatch value={el.headerBackground} onChange={(v) => upd({ headerBackground: v })} /></div>
-        <div><PanelLabel>Texto do cabeçalho</PanelLabel><ColorSwatch value={el.headerTextColor} onChange={(v) => upd({ headerTextColor: v })} /></div>
+        <div><PanelLabel>Cor do cabeçalho</PanelLabel><ColorSwatch label="Cor do cabeçalho" value={el.headerBackground} onChange={(v) => upd({ headerBackground: v })} /></div>
+        <div><PanelLabel>Texto do cabeçalho</PanelLabel><ColorSwatch label="Texto do cabeçalho" value={el.headerTextColor} onChange={(v) => upd({ headerTextColor: v })} /></div>
       </Row>
       <Row cols={2}>
-        <div><PanelLabel>Cor da borda</PanelLabel><ColorSwatch value={el.borderColor} onChange={(v) => upd({ borderColor: v })} /></div>
-        <div><PanelLabel>Cor zebrada</PanelLabel><ColorSwatch value={el.alternateColor} onChange={(v) => upd({ alternateColor: v })} /></div>
+        <div><PanelLabel>Cor da borda</PanelLabel><ColorSwatch label="Cor da borda da tabela" value={el.borderColor} onChange={(v) => upd({ borderColor: v })} /></div>
+        <div><PanelLabel>Cor zebrada</PanelLabel><ColorSwatch label="Cor zebrada" value={el.alternateColor} onChange={(v) => upd({ alternateColor: v })} /></div>
       </Row>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Dê duplo clique numa célula no canvas para editar o texto.</div>
     </Section>
@@ -609,7 +612,7 @@ function ChartProperties({ el, onChange }: { el: ChartElement; onChange: (u: (e:
     <Section title="Gráfico">
       <Row>
         <PanelLabel>Tipo</PanelLabel>
-        <SelectInput value={el.chartType} onChange={(v) => upd({ chartType: v as ChartElement['chartType'] })} options={[
+        <SelectInput label="Tipo de gráfico" value={el.chartType} onChange={(v) => upd({ chartType: v as ChartElement['chartType'] })} options={[
           { value: 'bar', label: 'Barras' }, { value: 'line', label: 'Linha' }, { value: 'pie', label: 'Pizza' },
         ]} />
       </Row>
@@ -701,14 +704,14 @@ function SlideProperties({ slide, onUpdateSlide }: { slide: Slide; onUpdateSlide
     <Section title="Fundo do Slide">
       <Row>
         <PanelLabel>Tipo</PanelLabel>
-        <SelectInput value={bg.type} onChange={(v) => updBg({ type: v as 'color' | 'gradient' | 'image' })} options={[
+        <SelectInput label="Tipo de fundo do slide" value={bg.type} onChange={(v) => updBg({ type: v as 'color' | 'gradient' | 'image' })} options={[
           { value: 'color', label: 'Cor sólida' }, { value: 'gradient', label: 'Gradiente' }, { value: 'image', label: 'Imagem URL' },
         ]} />
       </Row>
       {bg.type === 'color' && (
         <Row>
           <PanelLabel>Cor</PanelLabel>
-          <ColorSwatch value={bg.color ?? '#ffffff'} onChange={(v) => updBg({ color: v })} />
+          <ColorSwatch label="Cor de fundo do slide" value={bg.color ?? '#ffffff'} onChange={(v) => updBg({ color: v })} />
         </Row>
       )}
       {bg.type === 'gradient' && (
@@ -773,7 +776,7 @@ function ThemeProperties({ presentation, onSetTheme }: { presentation: Presentat
               onClick={() => onSetTheme(theme)}
               style={{
                 padding: 10,
-                border: `2px solid ${th.id === theme.id ? 'var(--accent)' : 'var(--border)'}`,
+                border: `2px solid ${th.id === theme.id ? 'var(--accent-hover)' : 'var(--border)'}`,
                 borderRadius: 'var(--r-sm)',
                 background: th.id === theme.id ? 'var(--accent-soft)' : 'var(--bg)',
                 cursor: 'pointer',
@@ -793,7 +796,7 @@ function ThemeProperties({ presentation, onSetTheme }: { presentation: Presentat
                   <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
                 ))}
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: th.id === theme.id ? 'var(--accent)' : 'var(--text-2)' }}>{theme.name}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: th.id === theme.id ? 'var(--accent-hover)' : 'var(--text-2)' }}>{theme.name}</span>
             </button>
           ))}
         </div>
@@ -802,19 +805,19 @@ function ThemeProperties({ presentation, onSetTheme }: { presentation: Presentat
         {colorLabels.map(([label, key]) => (
           <Row key={key}>
             <PanelLabel>{label}</PanelLabel>
-            <ColorSwatch value={th.colors[key]} onChange={(v) => updColors({ [key]: v })} />
+            <ColorSwatch label={label} value={th.colors[key]} onChange={(v) => updColors({ [key]: v })} />
           </Row>
         ))}
       </Section>
       <Section title="Tipografia" defaultOpen={false}>
         <Row>
           <PanelLabel>Fonte título</PanelLabel>
-          <SelectInput value={th.fonts.heading} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, heading: v } })}
+          <SelectInput label="Fonte título" value={th.fonts.heading} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, heading: v } })}
             options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
         <Row>
           <PanelLabel>Fonte corpo</PanelLabel>
-          <SelectInput value={th.fonts.body} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, body: v } })}
+          <SelectInput label="Fonte corpo" value={th.fonts.body} onChange={(v) => onSetTheme({ ...th, fonts: { ...th.fonts, body: v } })}
             options={PPTX_SAFE_FONTS.map((f) => ({ value: f, label: f }))} />
         </Row>
       </Section>
@@ -905,7 +908,7 @@ export function PropertiesPanel({
   /* ── Collapsed state — faixa estreita ────────────────── */
   if (collapsed) {
     return (
-      <aside style={{
+      <aside aria-label="Propriedades" style={{
         width: 36,
         flexShrink: 0,
         background: 'var(--surface)',
@@ -980,7 +983,7 @@ export function PropertiesPanel({
   /* ── Render: sem seleção ─────────────────────────────── */
   if (selectedElements.length === 0) {
     return (
-      <aside style={{
+      <aside aria-label="Propriedades" style={{
         width: 256,
         flexShrink: 0,
         background: 'var(--surface)',
@@ -1023,7 +1026,7 @@ export function PropertiesPanel({
   /* ── Render: multi-seleção ───────────────────────────── */
   if (selectedElements.length > 1) {
     return (
-      <aside style={{
+      <aside aria-label="Propriedades" style={{
         width: 256,
         flexShrink: 0,
         background: 'var(--surface)',
@@ -1159,7 +1162,7 @@ export function PropertiesPanel({
 
   /* ── Render: seleção única (padrão com tabs) ─────────── */
   return (
-    <aside style={{
+    <aside aria-label="Propriedades" style={{
       width: 256,
       flexShrink: 0,
       background: 'var(--surface)',

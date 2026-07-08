@@ -109,7 +109,7 @@ export function Onboarding() {
           zIndex: 202,
         }}
       >
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.55, marginBottom: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.85, marginBottom: 6 }}>
           {current.title}
         </div>
         <div style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.85, marginBottom: 14 }}>

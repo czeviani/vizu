@@ -389,6 +389,7 @@ export function Toolbar({
       position: 'relative',
       zIndex: 20,
     }}>
+      <h1 className="sr-only">{presentation.title || 'Editor de apresentação'}</h1>
       {/* ── Main toolbar row ─────────────────────────────── */}
       <div style={{
         height: 60,

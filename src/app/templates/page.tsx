@@ -292,7 +292,7 @@ function TemplateCard({
       {/* Corpo do card */}
       <div style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-          <h3 style={{
+          <h2 style={{
             margin: 0,
             fontSize: 14,
             fontWeight: 600,
@@ -305,7 +305,7 @@ function TemplateCard({
             minWidth: 0,
           }}>
             {template.name}
-          </h3>
+          </h2>
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -902,9 +902,9 @@ export default function TemplatesPage() {
                 style={{
                   padding: '7px 16px',
                   borderRadius: 'var(--r-full)',
-                  border: `1.5px solid ${activeCategory === cat ? 'var(--accent)' : 'var(--border)'}`,
+                  border: `1.5px solid ${activeCategory === cat ? 'var(--accent-hover)' : 'var(--border)'}`,
                   background: activeCategory === cat ? 'var(--accent-soft)' : 'var(--surface)',
-                  color: activeCategory === cat ? 'var(--accent)' : 'var(--text-2)',
+                  color: activeCategory === cat ? 'var(--accent-hover)' : 'var(--text-2)',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',

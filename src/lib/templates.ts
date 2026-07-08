@@ -10,6 +10,22 @@ import type {
 } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
 
+// Luminância relativa (WCAG) — usada para escolher o mais escuro entre dois tokens de
+// cor do tema. Necessário porque `colors.text` é claro em temas escuros (ex.: midnight),
+// então não pode ser assumido como "cor escura" ao usá-lo como fundo cheio de slide.
+function relativeLuminance(hex: string): number {
+  const m = hex.replace('#', '');
+  const r = parseInt(m.substring(0, 2), 16) / 255;
+  const g = parseInt(m.substring(2, 4), 16) / 255;
+  const b = parseInt(m.substring(4, 6), 16) / 255;
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function darkerOf(a: string, b: string): string {
+  return relativeLuminance(a) <= relativeLuminance(b) ? a : b;
+}
+
 const defaultText = (
   overrides: Partial<TextElement> & Pick<TextElement, 'x' | 'y' | 'width' | 'height' | 'content'>
 ): TextElement => ({
@@ -618,7 +634,7 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       y: 0,
       width: SLIDE_WIDTH,
       height: SLIDE_HEIGHT,
-      fill: c.text,
+      fill: darkerOf(c.text, c.background),
       zIndex: 0,
     }),
     defaultShape({

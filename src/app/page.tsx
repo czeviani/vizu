@@ -217,7 +217,7 @@ function PresentationCard({
       <div style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{
+            <h2 style={{
               margin: 0,
               fontSize: 14,
               fontWeight: 600,
@@ -228,7 +228,7 @@ function PresentationCard({
               letterSpacing: '-0.01em',
             }}>
               {p.title}
-            </h3>
+            </h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
               Editado {formatDate(p.metadata.updatedAt)}
             </p>
@@ -237,6 +237,7 @@ function PresentationCard({
           {/* Menu ··· */}
           <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button
+              aria-label="Mais opções"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
               style={{
                 background: menuOpen ? 'var(--surface-2)' : 'transparent',
@@ -505,8 +506,6 @@ export default function HomePage() {
             style={{
               width: '100%',
               justifyContent: 'center',
-              background: 'var(--sidebar-accent)',
-              borderColor: 'var(--sidebar-accent)',
               padding: sidebarCollapsed ? '8px' : undefined,
               minWidth: 0,
             }}
@@ -525,6 +524,7 @@ export default function HomePage() {
               padding: sidebarCollapsed ? '8px' : undefined,
               minWidth: 0,
               fontSize: 12.5,
+              color: 'var(--sidebar-text)',
             }}
           >
             <IcoSparkle />

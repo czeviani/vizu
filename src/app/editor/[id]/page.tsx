@@ -514,7 +514,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           onToggleCollapse={handleToggleSlidePanel}
         />
 
-        <div
+        <main
+          aria-label="Canvas do slide"
           style={{
             flex: 1, overflow: 'auto', background: 'var(--canvas-bg)',
             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 40,
@@ -549,7 +550,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
               }}
             />
           </div>
-        </div>
+        </main>
 
         <PropertiesPanel
           presentation={pres}

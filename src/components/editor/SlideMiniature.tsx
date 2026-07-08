@@ -28,6 +28,7 @@ export function SlideMiniature({ slide, presentation: _ }: Props) {
 
   return (
     <div
+      aria-hidden="true"
       style={{
         position: 'relative',
         width: THUMB_W,
