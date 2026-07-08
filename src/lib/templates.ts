@@ -226,15 +226,28 @@ export function buildSlideFromSpec(spec: AISlideSpec, theme: Theme): Slide {
 function buildCoverElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
   const elements: SlideElement[] = [];
 
-  // Accent bar
+  // Barra inferior bicolor — primary + um segmento em accent (a 2ª cor da marca, hoje quase
+  // ausente do composer genérico; ecoa no top line do closing pra fechar o "bookend" visual).
+  const accentSegW = 160;
   elements.push(
     defaultShape({
       id: uuid(),
       x: 0,
       y: SLIDE_HEIGHT - 8,
-      width: SLIDE_WIDTH,
+      width: SLIDE_WIDTH - accentSegW,
       height: 8,
       fill: c.primary,
+      zIndex: 2,
+    })
+  );
+  elements.push(
+    defaultShape({
+      id: uuid(),
+      x: SLIDE_WIDTH - accentSegW,
+      y: SLIDE_HEIGHT - 8,
+      width: accentSegW,
+      height: 8,
+      fill: c.accent,
       zIndex: 2,
     })
   );
@@ -319,7 +332,7 @@ function buildCoverElements(d: AISlideSpec['data'], c: Theme['colors'], theme: T
     );
   }
 
-  // Decorative shape
+  // Forma decorativa primária (grande, translúcida)
   elements.push(
     defaultShape({
       id: uuid(),
@@ -332,6 +345,22 @@ function buildCoverElements(d: AISlideSpec['data'], c: Theme['colors'], theme: T
       opacity: 0.08,
       border: { width: 0, color: '', style: 'none', radius: 24 },
       zIndex: 1,
+    })
+  );
+
+  // Bloco de acento secundário (accent) — cor sólida, pequeno, espiando o canto da forma
+  // primária. Sem isso o token "accent" do tema nunca aparece na capa (ex.: o amarelo da Gerdau).
+  elements.push(
+    defaultShape({
+      id: uuid(),
+      x: SLIDE_WIDTH - 340,
+      y: 400,
+      width: 64,
+      height: 64,
+      fill: c.accent,
+      shape: 'rounded-rectangle',
+      border: { width: 0, color: '', style: 'none', radius: 14 },
+      zIndex: 2,
     })
   );
 
@@ -348,6 +377,29 @@ function buildSectionElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       height: SLIDE_HEIGHT,
       fill: c.primary,
       zIndex: 0,
+    }),
+    // Círculo grande e suave sangrando pelo canto — profundidade sem competir com o título.
+    defaultShape({
+      id: uuid(),
+      x: SLIDE_WIDTH - 200,
+      y: -120,
+      width: 320,
+      height: 320,
+      fill: c.accent,
+      shape: 'circle',
+      opacity: 0.14,
+      zIndex: 1,
+    }),
+    // Régua de destaque em accent, acima do título — a 2ª cor da marca também aparece na seção.
+    defaultShape({
+      id: uuid(),
+      x: SLIDE_WIDTH / 2 - 40,
+      y: SLIDE_HEIGHT / 2 - 96,
+      width: 80,
+      height: 4,
+      fill: c.accent,
+      border: { width: 0, color: '', style: 'none', radius: 2 },
+      zIndex: 2,
     }),
     defaultText({
       id: uuid(),
@@ -793,13 +845,24 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       fill: closingBg,
       zIndex: 0,
     }),
+    // Linha do topo bicolor — ecoa a barra inferior do cover (mesmo accentSegW), fechando
+    // o par capa/encerramento como um "bookend" visual consistente.
     defaultShape({
       id: uuid(),
       x: 0,
       y: 0,
-      width: SLIDE_WIDTH,
+      width: SLIDE_WIDTH - 160,
       height: 6,
       fill: c.primary,
+      zIndex: 1,
+    }),
+    defaultShape({
+      id: uuid(),
+      x: SLIDE_WIDTH - 160,
+      y: 0,
+      width: 160,
+      height: 6,
+      fill: c.accent,
       zIndex: 1,
     }),
     defaultText({

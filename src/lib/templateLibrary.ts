@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
-import type { AISlideSpec, Presentation, TemplateDefinition } from '@/types/slide';
+import type { AISlideSpec, Presentation, Slide, SlideElement, TemplateDefinition } from '@/types/slide';
+import { SLIDE_HEIGHT } from '@/types/slide';
 import { buildSlideFromSpec } from '@/lib/templates';
 import { getThemeById } from '@/lib/themes';
 
@@ -843,11 +844,43 @@ export function getAllTemplates(): TemplateDefinition[] {
   return [...BUILT_IN_TEMPLATES, ...getTemplateStorage()];
 }
 
+// ── Marca própria da Gerdau ───────────────────────────────────────
+// O composer genérico é o mesmo pra qualquer tema (só recolore); o template
+// institucional ganha aqui um elemento de marca real e consistente — uma
+// "lombada" vertical em accent (amarelo) na borda esquerda de capa/seção/
+// encerramento, unificando o deck visualmente. Fica em área sempre vazia
+// nesses três layouts, então nunca colide com título/subtítulo/conteúdo.
+function applyGerdauBrandSpine(slides: Slide[]): Slide[] {
+  const theme = getThemeById('gerdau');
+  return slides.map((slide) => {
+    if (slide.layout !== 'cover' && slide.layout !== 'section' && slide.layout !== 'closing') return slide;
+    const spine: SlideElement = {
+      id: uuid(),
+      type: 'shape',
+      shape: 'rectangle',
+      x: 0,
+      y: 0,
+      width: 14,
+      height: SLIDE_HEIGHT,
+      fill: theme.colors.accent,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 4,
+      locked: false,
+      visible: true,
+      border: { width: 0, color: 'transparent', style: 'none', radius: 0 },
+      shadow: { enabled: false, x: 0, y: 0, blur: 0, color: 'transparent' },
+    };
+    return { ...slide, elements: [...slide.elements, spine] };
+  });
+}
+
 // ── Preview: materializa o deck em Slide[] real (mesmo motor da IA) ──
 
-export function materializeTemplate(template: TemplateDefinition): import('@/types/slide').Slide[] {
+export function materializeTemplate(template: TemplateDefinition): Slide[] {
   const theme = getThemeById(template.themeId);
-  return template.deck.map((spec: AISlideSpec) => buildSlideFromSpec(spec, theme));
+  const slides = template.deck.map((spec: AISlideSpec) => buildSlideFromSpec(spec, theme));
+  return template.id === 'builtin-institucional-gerdau' ? applyGerdauBrandSpine(slides) : slides;
 }
 
 // ── Cria presentation a partir de template ───────────────────────
@@ -864,7 +897,7 @@ export function createPresentationFromTemplate(templateId: string): Presentation
     id: uuid(),
     title: template.name,
     theme,
-    slides: template.deck.map((spec) => buildSlideFromSpec(spec, theme)),
+    slides: materializeTemplate(template),
     metadata: {
       createdAt: now,
       updatedAt: now,
