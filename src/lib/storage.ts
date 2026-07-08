@@ -28,19 +28,23 @@ async function remoteList(): Promise<Presentation[]> {
   return data.map((r) => r.data as Presentation);
 }
 
-function remoteUpsert(p: Presentation): void {
-  if (!supabase) return;
-  supabase.from('vizu_presentations').upsert({
+async function remoteUpsert(p: Presentation): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.from('vizu_presentations').upsert({
     id: p.id,
     title: p.title,
     data: p as unknown as Record<string, unknown>,
     updated_at: new Date().toISOString(),
-  }).then(() => {});
+  });
+  if (error) console.error('[storage] falha ao salvar na nuvem:', error.message);
+  return error?.message ?? null;
 }
 
-function remoteDelete(id: string): void {
-  if (!supabase) return;
-  supabase.from('vizu_presentations').delete().eq('id', id).then(() => {});
+async function remoteDelete(id: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.from('vizu_presentations').delete().eq('id', id);
+  if (error) console.error('[storage] falha ao excluir na nuvem:', error.message);
+  return error?.message ?? null;
 }
 
 // ── Public API ─────────────────────────────────────────────────
@@ -69,11 +73,25 @@ export const storage = {
     remoteUpsert(updated);
   },
 
-  delete(id: string): void {
+  // Removes locally first (instant UI feedback), then confirms remotely.
+  // If the remote delete fails (e.g. RLS blocking it), the item is restored
+  // locally so it doesn't silently reappear on the next init() sync.
+  async delete(id: string): Promise<{ ok: boolean; error?: string }> {
     const all = localLoad();
+    const backup = all[id];
     delete all[id];
     localSave(all);
-    remoteDelete(id);
+
+    const error = await remoteDelete(id);
+    if (error) {
+      if (backup) {
+        const current = localLoad();
+        current[id] = backup;
+        localSave(current);
+      }
+      return { ok: false, error };
+    }
+    return { ok: true };
   },
 
   // Call once on app boot: fetches from Supabase and hydrates localStorage.

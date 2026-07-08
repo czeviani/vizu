@@ -9,6 +9,8 @@ import { createSlideFromLayout } from '@/lib/templates';
 import { SlideMiniature } from '@/components/editor/SlideMiniature';
 import { NewPresentationWizard } from '@/components/NewPresentationWizard';
 import { Onboarding } from '@/components/Onboarding';
+import { Modal } from '@/components/ui/Modal';
+import { ToastContainer, useToasts } from '@/components/ui/Toast';
 import { t } from '@/lib/i18n';
 
 function formatDate(iso: string) {
@@ -37,9 +39,6 @@ function IcoLayout() {
 }
 function IcoDownload() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>;
-}
-function IcoClose() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>;
 }
 function IcoEllipsis() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>;
@@ -326,51 +325,7 @@ function CardSkeleton() {
   );
 }
 
-/* ── Modal ────────────────────────────────────────────────────── */
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div
-      className="modal-backdrop"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="modal-box">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)' }}>{title}</h2>
-          <button
-            onClick={onClose}
-            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 6, cursor: 'pointer', color: 'var(--text-3)', display: 'flex', transition: 'all 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; }}
-          >
-            <IcoClose />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 /* ── Toast System ─────────────────────────────────────────────── */
-type ToastType = 'ok' | 'bad' | 'info';
-interface Toast { id: number; message: string; type: ToastType; }
-
-function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: number) => void }) {
-  return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.type}`} style={{ cursor: 'pointer' }} onClick={() => onRemove(toast.id)}>
-          {toast.type === 'ok' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>}
-          {toast.type === 'bad' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>}
-          {toast.type === 'info' && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>}
-          {toast.message}
-          <div className="toast-progress" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* ── Home Page ────────────────────────────────────────────────── */
 export default function HomePage() {
   const router = useRouter();
@@ -383,14 +338,7 @@ export default function HomePage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const toastId = useRef(0);
-
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = ++toastId.current;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3200);
-  }, []);
+  const { toasts, showToast, removeToast } = useToasts();
 
   const load = useCallback(() => {
     setPresentations(storage.list());
@@ -421,11 +369,15 @@ export default function HomePage() {
     router.push(`/editor/${p.id}`);
   }, [newTitle, newThemeId, router]);
 
-  const handleDelete = useCallback((id: string) => {
-    storage.delete(id);
-    load();
+  const handleDelete = useCallback(async (id: string) => {
     setDeleteConfirm(null);
-    showToast('Apresentação excluída', 'bad');
+    const result = await storage.delete(id);
+    load();
+    if (result.ok) {
+      showToast('Apresentação excluída', 'bad');
+    } else {
+      showToast(`Não foi possível excluir: ${result.error ?? 'erro desconhecido'}`, 'bad');
+    }
   }, [load, showToast]);
 
   const handleDuplicate = useCallback((p: Presentation) => {
@@ -863,7 +815,7 @@ export default function HomePage() {
         </Modal>
       )}
 
-      <ToastContainer toasts={toasts} onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <Onboarding />
     </div>
   );

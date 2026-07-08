@@ -2,11 +2,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TemplateDefinition } from '@/types/slide';
-import { getAllTemplates, createPresentationFromTemplate, materializeTemplate } from '@/lib/templateLibrary';
+import { getAllTemplates, createPresentationFromTemplate, materializeTemplate, deleteTemplate } from '@/lib/templateLibrary';
 import { storage } from '@/lib/storage';
 import { SlideMiniature } from '@/components/editor/SlideMiniature';
 import type { Slide, Presentation } from '@/types/slide';
 import { getThemeById } from '@/lib/themes';
+import { Modal } from '@/components/ui/Modal';
+import { ToastContainer, useToasts } from '@/components/ui/Toast';
 
 // ── Tipos ─────────────────────────────────────────────────────────
 
@@ -90,6 +92,14 @@ function IcoDownload() {
   );
 }
 
+function IcoTrash() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+    </svg>
+  );
+}
+
 function IcoSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -163,10 +173,12 @@ function TemplateCard({
   template,
   onPreview,
   onUse,
+  onDelete,
 }: {
   template: TemplateDefinition;
   onPreview: () => void;
   onUse: () => void;
+  onDelete?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const slides = useMemo(() => materializeTemplate(template), [template]);
@@ -287,6 +299,36 @@ function TemplateCard({
               Usar template
             </button>
           </div>
+        )}
+
+        {/* Excluir (só para templates próprios, não os embutidos) */}
+        {hovered && !template.isBuiltIn && onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            title="Excluir template"
+            aria-label="Excluir template"
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              width: 28,
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 'var(--r-sm)',
+              color: '#fff',
+              cursor: 'pointer',
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bad)'; e.currentTarget.style.borderColor = 'var(--bad)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+          >
+            <IcoTrash />
+          </button>
         )}
       </div>
 
@@ -640,6 +682,8 @@ export default function TemplatesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateDefinition | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<TemplateDefinition | null>(null);
+  const { toasts, showToast, removeToast } = useToasts();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Carrega templates
@@ -670,6 +714,13 @@ export default function TemplatesPage() {
     storage.set(presentation);
     router.push(`/editor/${presentation.id}`);
   }, [router]);
+
+  const handleDeleteTemplate = useCallback((id: string) => {
+    deleteTemplate(id);
+    setTemplates(getAllTemplates());
+    setDeleteConfirm(null);
+    showToast('Template excluído', 'bad');
+  }, [showToast]);
 
   const navItems = [
     { icon: <IcoPresentation />, label: 'Apresentações', active: false, onClick: () => router.push('/') },
@@ -1018,6 +1069,7 @@ export default function TemplatesPage() {
                   template={template}
                   onPreview={() => setPreviewTemplate(template)}
                   onUse={() => handleUseTemplate(template.id)}
+                  onDelete={template.isBuiltIn ? undefined : () => setDeleteConfirm(template)}
                 />
               ))}
             </div>
@@ -1036,6 +1088,25 @@ export default function TemplatesPage() {
           }}
         />
       )}
+
+      {/* Modal: Confirmar Exclusão de Template */}
+      {deleteConfirm && (
+        <Modal onClose={() => setDeleteConfirm(null)} title="Excluir Template">
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, lineHeight: 1.6 }}>
+            Tem certeza que deseja excluir o template <strong>&quot;{deleteConfirm.name}&quot;</strong>?
+            Esta ação não pode ser desfeita.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost">Cancelar</button>
+            <button onClick={() => handleDeleteTemplate(deleteConfirm.id)} className="btn btn-danger">
+              <IcoTrash />
+              Excluir
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
