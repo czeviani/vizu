@@ -4,7 +4,7 @@ import type {
   TableElement, LineElement, ChartElement, BorderStyle, ShadowStyle, TextStyle,
 } from '@/types/slide';
 import { getThemeById } from '@/lib/themes';
-import { BUILT_IN_TEMPLATES } from '@/lib/templateLibrary';
+import { BUILT_IN_TEMPLATES, materializeTemplate } from '@/lib/templateLibrary';
 
 // PNG 1x1 transparente — usado nos fixtures de imagem para não depender de rede.
 export const TINY_PNG =
@@ -148,7 +148,7 @@ function chart(overrides: Partial<ChartElement> & Pick<ChartElement, 'x' | 'y' |
   };
 }
 
-function presentation(title: string, slides: Slide[], themeId = 'slate'): Presentation {
+export function presentation(title: string, slides: Slide[], themeId = 'slate'): Presentation {
   const now = new Date().toISOString();
   return {
     id: uuid(),
@@ -259,7 +259,7 @@ export const fixtureBackgrounds: Presentation = presentation('Fixture — Fundos
 export const fixtureGerdauTemplate: Presentation = (() => {
   const tpl = BUILT_IN_TEMPLATES.find((t) => t.id === 'builtin-institucional-gerdau');
   if (!tpl) throw new Error('Template Institucional Gerdau não encontrado em BUILT_IN_TEMPLATES');
-  return presentation('Institucional Gerdau', tpl.slides, 'gerdau');
+  return presentation('Institucional Gerdau', materializeTemplate(tpl), 'gerdau');
 })();
 
 export const ALL_FIXTURES = [

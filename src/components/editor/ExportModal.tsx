@@ -307,9 +307,7 @@ export function ExportModal({ presentation, onClose }: ExportModalProps) {
   return (
     <>
       {/* Hidden off-screen slide renderers for capture */}
-      {/* SlideMiniature renders at 120×68 (scale=0.125). We wrap it in a
-          960×540 container with transform: scale(8) + transform-origin top-left
-          to produce a full-resolution DOM node that html-to-image can capture. */}
+      {/* SlideMiniature em resolução real (960×540) para html-to-image capturar em fidelidade total. */}
       <div aria-hidden="true" style={{ position: 'fixed', left: -9999, top: 0, pointerEvents: 'none', zIndex: -1 }}>
         {slides.map((slide, i) => (
           <div
@@ -317,10 +315,7 @@ export function ExportModal({ presentation, onClose }: ExportModalProps) {
             ref={(el) => { slideContainerRefs.current[i] = el; }}
             style={{ width: 960, height: 540, overflow: 'hidden', position: 'relative', flexShrink: 0 }}
           >
-            {/* Scale 120→960: factor = 960/120 = 8 */}
-            <div style={{ transformOrigin: 'top left', transform: 'scale(8)' }}>
-              <SlideMiniature slide={slide} presentation={presentation} />
-            </div>
+            <SlideMiniature slide={slide} presentation={presentation} />
           </div>
         ))}
       </div>

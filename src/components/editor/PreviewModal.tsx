@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import type { Presentation, TextElement, ShapeElement } from '@/types/slide';
+import type { Presentation, TextElement, ShapeElement, IconElement, TableElement, ChartElement } from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
 import { t } from '@/lib/i18n';
+import { IconEl } from './elements/IconEl';
+import { TableEl } from './elements/TableEl';
+import { ChartEl } from './elements/ChartEl';
 
 interface Props {
   presentation: Presentation;
@@ -138,6 +141,30 @@ export function PreviewModal({ presentation, startIndex, onClose }: Props) {
                 <div key={el.id} style={{ ...base, overflow: 'hidden', borderRadius: el.width * 0.02 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={(el as any).src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              );
+            }
+
+            if (el.type === 'icon') {
+              return (
+                <div key={el.id} style={base}>
+                  <IconEl element={el as IconElement} />
+                </div>
+              );
+            }
+
+            if (el.type === 'table') {
+              return (
+                <div key={el.id} style={base}>
+                  <TableEl element={el as TableElement} />
+                </div>
+              );
+            }
+
+            if (el.type === 'chart') {
+              return (
+                <div key={el.id} style={base}>
+                  <ChartEl element={el as ChartElement} />
                 </div>
               );
             }

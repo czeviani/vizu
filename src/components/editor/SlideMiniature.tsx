@@ -1,17 +1,32 @@
 'use client';
-import type { Slide, Presentation, TextElement, ShapeElement } from '@/types/slide';
+import * as LucideIcons from 'lucide-react';
+import type {
+  Slide,
+  Presentation,
+  TextElement,
+  ShapeElement,
+  IconElement,
+  TableElement,
+  ChartElement,
+} from '@/types/slide';
 import { SLIDE_WIDTH, SLIDE_HEIGHT } from '@/types/slide';
+import { ChartEl } from './elements/ChartEl';
 
 interface Props {
   slide: Slide;
   presentation: Presentation;
+  /** Largura renderizada em px. Default = SLIDE_WIDTH (tamanho real do slide) — o chamador
+   *  aplica `transform: scale(...)` para encaixar no espaço disponível (ex.: cards da galeria,
+   *  captura para export). Para um tile pequeno nativo (sem wrapper de escala), passe um valor
+   *  menor (ex.: 120, usado na sidebar de slides). */
+  width?: number;
 }
 
-const THUMB_W = 120;
-const THUMB_H = 68;
-const SCALE = THUMB_W / SLIDE_WIDTH;
+export function SlideMiniature({ slide, presentation: _, width = SLIDE_WIDTH }: Props) {
+  const THUMB_W = width;
+  const THUMB_H = width * (SLIDE_HEIGHT / SLIDE_WIDTH);
+  const SCALE = width / SLIDE_WIDTH;
 
-export function SlideMiniature({ slide, presentation: _ }: Props) {
   const bg = slide.background;
   let backgroundStyle: React.CSSProperties = { background: '#ffffff' };
   if (bg.type === 'color') backgroundStyle = { background: bg.color };
@@ -102,6 +117,82 @@ export function SlideMiniature({ slide, presentation: _ }: Props) {
                 borderRadius: el.width * 0.05 * SCALE,
               }}
             />
+          );
+        }
+
+        if (el.type === 'icon') {
+          const ic = el as IconElement;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const Icon = (LucideIcons as any)[ic.iconName] as
+            | React.ComponentType<{ size: number; color: string; strokeWidth: number }>
+            | undefined;
+          const size = Math.min(el.width, el.height) * SCALE * 0.7;
+          return (
+            <div
+              key={el.id}
+              style={{
+                ...base,
+                background: ic.background === 'transparent' ? undefined : ic.background,
+                borderRadius: ic.border.radius * SCALE,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {Icon && <Icon size={size} color={ic.color} strokeWidth={1.5} />}
+            </div>
+          );
+        }
+
+        if (el.type === 'chart') {
+          const ch = el as ChartElement;
+          return (
+            <div key={el.id} style={base}>
+              <ChartEl element={ch} />
+            </div>
+          );
+        }
+
+        if (el.type === 'table') {
+          const tb = el as TableElement;
+          return (
+            <div key={el.id} style={{ ...base, overflow: 'hidden' }}>
+              <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <tbody>
+                  {tb.rows.map((row, ri) => {
+                    const isHeader = tb.headerRow && ri === 0;
+                    const isAlt = tb.alternateRowColor && ri % 2 === 1 && !isHeader;
+                    return (
+                      <tr key={ri}>
+                        {row.map((cell, ci) => {
+                          const isHeaderCol = tb.headerCol && ci === 0;
+                          const cellBg = isHeader || isHeaderCol ? tb.headerBackground : isAlt ? tb.alternateColor : 'transparent';
+                          const color = isHeader || isHeaderCol ? tb.headerTextColor : cell.style?.color ?? '#0f172a';
+                          return (
+                            <td
+                              key={ci}
+                              style={{
+                                background: cell.background !== 'transparent' ? cell.background : cellBg,
+                                color,
+                                border: `${Math.max(0.5, SCALE)}px solid ${tb.borderColor}`,
+                                padding: 6 * SCALE,
+                                fontWeight: isHeader || isHeaderCol ? 600 : 400,
+                                fontSize: Math.max(4, 13 * SCALE),
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {cell.content}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           );
         }
 

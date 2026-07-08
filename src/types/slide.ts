@@ -1,6 +1,18 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'icon' | 'table' | 'line' | 'chart';
 
-export type LayoutType = 'blank' | 'cover' | 'section' | 'content' | 'comparison' | 'quote' | 'closing';
+export type LayoutType =
+  | 'blank'
+  | 'cover'
+  | 'section'
+  | 'content'
+  | 'comparison'
+  | 'quote'
+  | 'closing'
+  | 'metrics'
+  | 'agenda'
+  | 'chart'
+  | 'table'
+  | 'image-split';
 
 export type ShapeType =
   | 'rectangle'
@@ -204,6 +216,18 @@ export interface Presentation {
   };
 }
 
+// Template da galeria: deck semântico (não Slide[] congelado) — materializado via
+// buildSlideFromSpec no momento do uso, pelo mesmo motor que a geração por IA usa.
+export interface TemplateDefinition {
+  id: string;
+  name: string;
+  category: 'Negócios' | 'Educação' | 'Criativo' | 'Minimalista' | 'Institucional';
+  themeId: string;
+  deck: AISlideSpec[];
+  isBuiltIn: boolean;
+  createdAt: string;
+}
+
 // AI creation types
 export interface AISlideSpec {
   layout: LayoutType;
@@ -221,6 +245,10 @@ export interface AISlideSpec {
     quote?: string;
     attribution?: string;
     columns?: Array<{ heading: string; rows: string[] }>;
+    bulletIcons?: string[];
+    metrics?: Array<{ value: string; label: string; delta?: string }>;
+    chart?: { chartType: ChartType; labels: string[]; series: ChartSeries[]; title?: string };
+    image?: { src?: string; alt?: string };
   };
   background?: Partial<SlideBackground>;
 }

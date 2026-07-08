@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { VisuTemplate } from '@/lib/templateLibrary';
-import { getAllTemplates, createPresentationFromTemplate } from '@/lib/templateLibrary';
+import type { TemplateDefinition } from '@/types/slide';
+import { getAllTemplates, createPresentationFromTemplate, materializeTemplate } from '@/lib/templateLibrary';
 import { storage } from '@/lib/storage';
 import { SlideMiniature } from '@/components/editor/SlideMiniature';
 import type { Slide, Presentation } from '@/types/slide';
@@ -164,12 +164,13 @@ function TemplateCard({
   onPreview,
   onUse,
 }: {
-  template: VisuTemplate;
+  template: TemplateDefinition;
   onPreview: () => void;
   onUse: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const firstSlide = template.slides[0];
+  const slides = useMemo(() => materializeTemplate(template), [template]);
+  const firstSlide = slides[0];
   const theme = getThemeById(template.themeId);
 
   // Presentation object mock para SlideMiniature
@@ -177,7 +178,7 @@ function TemplateCard({
     id: template.id,
     title: template.name,
     theme,
-    slides: template.slides,
+    slides,
     metadata: { createdAt: template.createdAt, updatedAt: template.createdAt, version: '1.0' },
   };
 
@@ -231,7 +232,7 @@ function TemplateCard({
           padding: '2px 8px',
           borderRadius: 'var(--r-full)',
         }}>
-          {template.slides.length} slides
+          {slides.length} slides
         </div>
 
         {/* Overlay de hover */}
@@ -342,24 +343,25 @@ function PreviewModal({
   onClose,
   onUse,
 }: {
-  template: VisuTemplate;
+  template: TemplateDefinition;
   onClose: () => void;
   onUse: () => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const theme = getThemeById(template.themeId);
   const catStyle = CATEGORY_COLOR[template.category] ?? CATEGORY_COLOR['Minimalista'];
+  const slides = useMemo(() => materializeTemplate(template), [template]);
 
   const fakePres: Presentation = {
     id: template.id,
     title: template.name,
     theme,
-    slides: template.slides,
+    slides,
     metadata: { createdAt: template.createdAt, updatedAt: template.createdAt, version: '1.0' },
   };
 
-  const currentSlide: Slide = template.slides[currentIndex];
-  const total = template.slides.length;
+  const currentSlide: Slide = slides[currentIndex];
+  const total = slides.length;
 
   // Navegação por teclado
   useEffect(() => {
@@ -513,7 +515,7 @@ function PreviewModal({
 
             {/* Dots */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              {template.slides.map((_, i) => (
+              {slides.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentIndex(i)}
@@ -557,7 +559,7 @@ function PreviewModal({
 
           {/* Miniaturas dos slides */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {template.slides.map((slide, i) => (
+            {slides.map((slide, i) => (
               <button
                 key={slide.id}
                 onClick={() => setCurrentIndex(i)}
@@ -631,13 +633,13 @@ function PreviewModal({
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<VisuTemplate[]>([]);
+  const [templates, setTemplates] = useState<TemplateDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState<VisuTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateDefinition | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Carrega templates

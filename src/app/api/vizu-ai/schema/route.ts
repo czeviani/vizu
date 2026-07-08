@@ -48,7 +48,7 @@ export async function GET() {
 
     slide: {
       id: 'string (UUID v4)',
-      layout: 'blank | cover | section | content | comparison | quote | closing',
+      layout: 'blank | cover | section | content | comparison | quote | closing | metrics | agenda | chart | table | image-split',
       background: {
         type: 'color | gradient | image',
         color: 'string (hex) — quando type=color',

@@ -73,6 +73,11 @@ export const t = {
   layout_comparison: 'Comparação',
   layout_quote: 'Citação',
   layout_closing: 'Encerramento',
+  layout_metrics: 'Métricas',
+  layout_agenda: 'Agenda',
+  layout_chart: 'Gráfico',
+  layout_table: 'Tabela',
+  layout_image_split: 'Imagem + Texto',
   slide_duplicate: 'Duplicar',
   slide_delete: 'Excluir',
 

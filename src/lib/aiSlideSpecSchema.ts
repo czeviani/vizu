@@ -1,7 +1,21 @@
 import { z } from 'zod';
 
 // Layouts que a IA pode gerar (exclui 'blank', que só existe para slides manuais em branco).
-export const AI_LAYOUTS = ['cover', 'section', 'content', 'comparison', 'quote', 'closing'] as const;
+export const AI_LAYOUTS = [
+  'cover',
+  'section',
+  'content',
+  'comparison',
+  'quote',
+  'closing',
+  'metrics',
+  'agenda',
+  'chart',
+  'table',
+  'image-split',
+] as const;
+
+const chartTypeSchema = z.enum(['bar', 'line', 'pie']);
 
 export const aiSlideSpecSchema = z.object({
   layout: z.enum(AI_LAYOUTS),
@@ -27,6 +41,38 @@ export const aiSlideSpecSchema = z.object({
           })
         )
         .max(4)
+        .optional(),
+      bulletIcons: z.array(z.string().max(40)).max(6).optional(),
+      metrics: z
+        .array(
+          z.object({
+            value: z.string().max(24),
+            label: z.string().max(60),
+            delta: z.string().max(40).optional(),
+          })
+        )
+        .max(4)
+        .optional(),
+      chart: z
+        .object({
+          chartType: chartTypeSchema,
+          labels: z.array(z.string().max(24)).max(12),
+          series: z
+            .array(
+              z.object({
+                name: z.string().max(40),
+                values: z.array(z.number()).max(12),
+              })
+            )
+            .max(4),
+          title: z.string().max(80).optional(),
+        })
+        .optional(),
+      image: z
+        .object({
+          src: z.string().max(2000).optional(),
+          alt: z.string().max(160).optional(),
+        })
         .optional(),
     })
     .strict(),

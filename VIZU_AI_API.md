@@ -45,6 +45,7 @@ Create a full presentation from a structured spec.
 | `rose` | Rose | Red/purple on white |
 | `ocean` | Ocean | Sky blue tones |
 | `mono` | Mono | Black and white |
+| `gerdau` | Gerdau | Institutional blue/yellow, Archivo font |
 
 ### Available layouts
 
@@ -53,10 +54,15 @@ Create a full presentation from a structured spec.
 | `blank` | — | — |
 | `cover` | `title` | `subtitle`, `author`, `date` |
 | `section` | `title` | `subtitle` |
-| `content` | `title` | `bullets[]`, `content` |
+| `content` | `title` | `bullets[]`, `bulletIcons[]` (lucide icon name per bullet), `content` |
 | `comparison` | — | `title`, `leftTitle`, `leftContent`, `rightTitle`, `rightContent` |
 | `quote` | `quote` | `attribution` |
 | `closing` | `title` | `subtitle` |
+| `metrics` | `metrics[]` ({value, label, delta?}, 2-4 items, real numbers only) | `title` |
+| `agenda` | `bullets[]` (up to 6, numbered list) | `title` |
+| `chart` | `chart` ({chartType, labels[], series[]}, real data only) | `title` |
+| `table` | `columns[]` ({heading, rows[]}, up to 4 columns) | `title` |
+| `image-split` | — | `title`, `bullets[]`, `image` ({src, alt} — leave empty, renders as placeholder) |
 
 ### Response
 

@@ -4,6 +4,11 @@ import type {
   SlideElement,
   TextElement,
   ShapeElement,
+  IconElement,
+  TableElement,
+  TableCell,
+  ChartElement,
+  ImageElement,
   Theme,
   AISlideSpec,
   LayoutType,
@@ -24,6 +29,32 @@ function relativeLuminance(hex: string): number {
 
 function darkerOf(a: string, b: string): string {
   return relativeLuminance(a) <= relativeLuminance(b) ? a : b;
+}
+
+// setTheme (usePresentation.ts) reteme substituindo, por igualdade EXATA de string, qualquer
+// cor que bata bit-a-bit com um token do tema antigo. Cores derivadas (ex.: darkerOf, ou um
+// '#ffffff' fixo) podem colidir por coincidência com um token não relacionado (ex.: vários temas
+// claros têm colors.background === '#ffffff') — nesse caso o valor derivado seria remapeado como
+// se fosse aquele token, produzindo uma cor errada após a troca de tema. Perturbamos o último
+// dígito hex em 1 unidade (mudança imperceptível) só quando há colisão, pra desambiguar.
+function avoidTokenCollision(hex: string, theme: Theme): string {
+  const collides = Object.values(theme.colors).some((t) => t.toLowerCase() === hex.toLowerCase());
+  if (!collides) return hex;
+  const last = hex.slice(-1);
+  const val = parseInt(last, 16);
+  if (Number.isNaN(val)) return hex;
+  const next = (val === 0 ? 1 : val - 1).toString(16);
+  return hex.slice(0, -1) + next;
+}
+
+// Cor de texto legível sobre um fundo cheio (ex.: capa de seção, encerramento).
+// Substitui os antigos '#ffffff'/'rgba(255,255,255,…)' fixos, que ficavam ilegíveis
+// quando o tema trocado tinha fundo claro (setTheme reteme o fill, não o texto que
+// dependia dele visualmente).
+function onColor(bgHex: string, theme: Theme, opts?: { muted?: boolean; mutedAlpha?: number }): string {
+  const dark = relativeLuminance(bgHex) < 0.5;
+  if (dark) return opts?.muted ? `rgba(255,255,255,${opts.mutedAlpha ?? 0.75})` : avoidTokenCollision('#ffffff', theme);
+  return opts?.muted ? theme.colors.textSecondary : theme.colors.text;
 }
 
 const defaultText = (
@@ -71,6 +102,74 @@ const defaultShape = (
   ...overrides,
 });
 
+const defaultIcon = (
+  overrides: Partial<IconElement> & Pick<IconElement, 'x' | 'y' | 'width' | 'height' | 'iconName' | 'color'>
+): IconElement => ({
+  id: uuid(),
+  type: 'icon',
+  rotation: 0,
+  opacity: 1,
+  zIndex: 2,
+  locked: false,
+  visible: true,
+  background: 'transparent',
+  border: { width: 0, color: 'transparent', style: 'none', radius: 0 },
+  ...overrides,
+});
+
+const defaultTable = (
+  overrides: Partial<TableElement> & Pick<TableElement, 'x' | 'y' | 'width' | 'height' | 'rows'>
+): TableElement => ({
+  id: uuid(),
+  type: 'table',
+  rotation: 0,
+  opacity: 1,
+  zIndex: 2,
+  locked: false,
+  visible: true,
+  headerRow: true,
+  headerCol: false,
+  borderColor: 'rgba(0,0,0,0.1)',
+  headerBackground: '#0f172a',
+  headerTextColor: '#ffffff',
+  alternateRowColor: true,
+  alternateColor: 'rgba(0,0,0,0.03)',
+  ...overrides,
+});
+
+const defaultChart = (
+  overrides: Partial<ChartElement> &
+    Pick<ChartElement, 'x' | 'y' | 'width' | 'height' | 'chartType' | 'labels' | 'series' | 'colors'>
+): ChartElement => ({
+  id: uuid(),
+  type: 'chart',
+  rotation: 0,
+  opacity: 1,
+  zIndex: 2,
+  locked: false,
+  visible: true,
+  showLegend: true,
+  ...overrides,
+});
+
+const defaultImage = (
+  overrides: Partial<ImageElement> & Pick<ImageElement, 'x' | 'y' | 'width' | 'height'>
+): ImageElement => ({
+  id: uuid(),
+  type: 'image',
+  src: '',
+  alt: '',
+  objectFit: 'cover',
+  rotation: 0,
+  opacity: 1,
+  zIndex: 1,
+  locked: false,
+  visible: true,
+  border: { width: 0, color: 'transparent', style: 'none', radius: 0 },
+  shadow: { enabled: false, x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.15)' },
+  ...overrides,
+});
+
 export function buildSlideFromSpec(spec: AISlideSpec, theme: Theme): Slide {
   const bg: import('@/types/slide').SlideBackground = { type: 'color', color: theme.colors.background, ...spec.background };
   const slide: Slide = {
@@ -101,6 +200,21 @@ export function buildSlideFromSpec(spec: AISlideSpec, theme: Theme): Slide {
       break;
     case 'closing':
       slide.elements = buildClosingElements(d, c, theme);
+      break;
+    case 'metrics':
+      slide.elements = buildMetricsElements(d, c, theme);
+      break;
+    case 'agenda':
+      slide.elements = buildAgendaElements(d, c, theme);
+      break;
+    case 'chart':
+      slide.elements = buildChartElements(d, c, theme);
+      break;
+    case 'table':
+      slide.elements = buildTableElements(d, c, theme);
+      break;
+    case 'image-split':
+      slide.elements = buildImageSplitElements(d, c, theme);
       break;
     default:
       slide.elements = [];
@@ -249,7 +363,7 @@ function buildSectionElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
         fontWeight: 700,
         fontStyle: 'normal',
         textDecoration: 'none',
-        color: '#ffffff',
+        color: onColor(c.primary, theme),
         textAlign: 'center',
         lineHeight: 1.2,
         letterSpacing: -0.3,
@@ -272,7 +386,7 @@ function buildSectionElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
               fontWeight: 300,
               fontStyle: 'normal',
               textDecoration: 'none',
-              color: 'rgba(255,255,255,0.8)',
+              color: onColor(c.primary, theme, { muted: true, mutedAlpha: 0.8 }),
               textAlign: 'center',
               lineHeight: 1.4,
               letterSpacing: 0,
@@ -284,11 +398,10 @@ function buildSectionElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
   ];
 }
 
-function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
-  const elements: SlideElement[] = [];
-
-  // Title bar
-  elements.push(
+// Cabeçalho compartilhado (barra de destaque + título + divisor) usado por content,
+// metrics, agenda, chart, table e image-split — todos são variações de "título + corpo".
+function buildHeader(title: string | undefined, fallback: string, c: Theme['colors'], theme: Theme): SlideElement[] {
+  return [
     defaultShape({
       id: uuid(),
       x: 80,
@@ -297,18 +410,14 @@ function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       height: 44,
       fill: c.primary,
       zIndex: 1,
-    })
-  );
-
-  // Title
-  elements.push(
+    }),
     defaultText({
       id: uuid(),
       x: 96,
       y: 52,
       width: SLIDE_WIDTH - 176,
       height: 52,
-      content: d.title ?? 'Título do Slide',
+      content: title ?? fallback,
       zIndex: 2,
       style: {
         fontFamily: theme.fonts.heading,
@@ -322,11 +431,7 @@ function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
         letterSpacing: -0.2,
         textTransform: 'none',
       },
-    })
-  );
-
-  // Divider
-  elements.push(
+    }),
     defaultShape({
       id: uuid(),
       x: 80,
@@ -335,12 +440,62 @@ function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       height: 1,
       fill: c.border,
       zIndex: 1,
-    })
-  );
+    }),
+  ];
+}
+
+function buildContentElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [...buildHeader(d.title, 'Título do Slide', c, theme)];
 
   // Bullets
   const bullets = d.bullets ?? (d.content ? [d.content] : []);
-  if (bullets.length > 0) {
+  const icons = d.bulletIcons;
+
+  if (bullets.length > 0 && icons && icons.length === bullets.length) {
+    // Variante com ícone por bullet: cada item é uma linha ícone + texto.
+    const rowH = Math.min(70, (SLIDE_HEIGHT - 160) / bullets.length);
+    bullets.forEach((b, i) => {
+      const rowY = 144 + i * rowH;
+      elements.push(
+        defaultIcon({
+          id: uuid(),
+          x: 80,
+          y: rowY,
+          width: 36,
+          height: 36,
+          iconName: icons[i],
+          color: c.primary,
+          background: c.surface,
+          border: { width: 1, color: c.border, style: 'solid', radius: 10 },
+          zIndex: 2,
+        })
+      );
+      elements.push(
+        defaultText({
+          id: uuid(),
+          x: 130,
+          y: rowY,
+          width: SLIDE_WIDTH - 210,
+          height: 36,
+          content: b,
+          zIndex: 2,
+          verticalAlign: 'middle',
+          style: {
+            fontFamily: theme.fonts.body,
+            fontSize: 18,
+            fontWeight: 400,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            color: c.textSecondary,
+            textAlign: 'left',
+            lineHeight: 1.4,
+            letterSpacing: 0,
+            textTransform: 'none',
+          },
+        })
+      );
+    });
+  } else if (bullets.length > 0) {
     const bulletText = bullets.map((b) => `• ${b}`).join('\n');
     elements.push(
       defaultText({
@@ -627,6 +782,7 @@ function buildQuoteElements(d: AISlideSpec['data'], c: Theme['colors'], theme: T
 }
 
 function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const closingBg = avoidTokenCollision(darkerOf(c.text, c.background), theme);
   return [
     defaultShape({
       id: uuid(),
@@ -634,7 +790,7 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
       y: 0,
       width: SLIDE_WIDTH,
       height: SLIDE_HEIGHT,
-      fill: darkerOf(c.text, c.background),
+      fill: closingBg,
       zIndex: 0,
     }),
     defaultShape({
@@ -660,7 +816,7 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
         fontWeight: 700,
         fontStyle: 'normal',
         textDecoration: 'none',
-        color: '#ffffff',
+        color: onColor(closingBg, theme),
         textAlign: 'center',
         lineHeight: 1.2,
         letterSpacing: -0.5,
@@ -683,7 +839,7 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
               fontWeight: 300,
               fontStyle: 'normal',
               textDecoration: 'none',
-              color: 'rgba(255,255,255,0.6)',
+              color: onColor(closingBg, theme, { muted: true, mutedAlpha: 0.6 }),
               textAlign: 'center',
               lineHeight: 1.4,
               letterSpacing: 0,
@@ -693,6 +849,380 @@ function buildClosingElements(d: AISlideSpec['data'], c: Theme['colors'], theme:
         ]
       : []),
   ];
+}
+
+function buildMetricsElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [...buildHeader(d.title, 'Métricas', c, theme)];
+
+  const metrics = d.metrics?.length ? d.metrics.slice(0, 4) : [{ value: '—', label: 'métrica' }];
+  const n = metrics.length;
+  const gap = 24;
+  const cardW = (SLIDE_WIDTH - 160 - gap * (n - 1)) / n;
+  const cardY = 150;
+  const cardH = SLIDE_HEIGHT - 210;
+
+  metrics.forEach((m, i) => {
+    const x = 80 + i * (cardW + gap);
+    elements.push(
+      defaultShape({
+        id: uuid(),
+        x,
+        y: cardY,
+        width: cardW,
+        height: cardH,
+        fill: c.surface,
+        border: { width: 1, color: c.border, style: 'solid', radius: 14 },
+        zIndex: 1,
+      })
+    );
+    elements.push(
+      defaultShape({
+        id: uuid(),
+        x,
+        y: cardY,
+        width: cardW,
+        height: 6,
+        fill: c.primary,
+        border: { width: 0, color: '', style: 'none', radius: 14 },
+        zIndex: 2,
+      })
+    );
+    elements.push(
+      defaultText({
+        id: uuid(),
+        x: x + 16,
+        y: cardY + 30,
+        width: cardW - 32,
+        height: 56,
+        content: m.value,
+        zIndex: 3,
+        style: {
+          fontFamily: theme.fonts.heading,
+          fontSize: n > 3 ? 32 : 40,
+          fontWeight: 700,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: c.text,
+          textAlign: 'left',
+          lineHeight: 1.1,
+          letterSpacing: -0.5,
+          textTransform: 'none',
+        },
+      })
+    );
+    elements.push(
+      defaultText({
+        id: uuid(),
+        x: x + 16,
+        y: cardY + 92,
+        width: cardW - 32,
+        height: 48,
+        content: m.label,
+        zIndex: 3,
+        style: {
+          fontFamily: theme.fonts.body,
+          fontSize: 14,
+          fontWeight: 400,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: c.textSecondary,
+          textAlign: 'left',
+          lineHeight: 1.4,
+          letterSpacing: 0,
+          textTransform: 'none',
+        },
+      })
+    );
+    if (m.delta) {
+      elements.push(
+        defaultText({
+          id: uuid(),
+          x: x + 16,
+          y: cardY + cardH - 40,
+          width: cardW - 32,
+          height: 28,
+          content: m.delta,
+          zIndex: 3,
+          style: {
+            fontFamily: theme.fonts.body,
+            fontSize: 13,
+            fontWeight: 600,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            color: c.accent,
+            textAlign: 'left',
+            lineHeight: 1.3,
+            letterSpacing: 0,
+            textTransform: 'none',
+          },
+        })
+      );
+    }
+  });
+
+  return elements;
+}
+
+function buildAgendaElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [...buildHeader(d.title, 'Agenda', c, theme)];
+
+  const items = (d.bullets ?? []).slice(0, 6);
+  if (items.length === 0) return elements;
+
+  const startY = 148;
+  const rowH = Math.min(64, (SLIDE_HEIGHT - startY - 40) / items.length);
+  const badgeSize = 32;
+
+  // Linha conectora vertical atrás dos badges numerados
+  elements.push(
+    defaultShape({
+      id: uuid(),
+      x: 80 + badgeSize / 2 - 1,
+      y: startY + badgeSize / 2,
+      width: 2,
+      height: (items.length - 1) * rowH,
+      fill: c.border,
+      zIndex: 1,
+    })
+  );
+
+  items.forEach((item, i) => {
+    const rowY = startY + i * rowH;
+    elements.push(
+      defaultShape({
+        id: uuid(),
+        x: 80,
+        y: rowY,
+        width: badgeSize,
+        height: badgeSize,
+        fill: c.primary,
+        shape: 'circle',
+        zIndex: 2,
+      })
+    );
+    elements.push(
+      defaultText({
+        id: uuid(),
+        x: 80,
+        y: rowY,
+        width: badgeSize,
+        height: badgeSize,
+        content: String(i + 1),
+        zIndex: 3,
+        verticalAlign: 'middle',
+        style: {
+          fontFamily: theme.fonts.heading,
+          fontSize: 15,
+          fontWeight: 700,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: onColor(c.primary, theme),
+          textAlign: 'center',
+          lineHeight: 1,
+          letterSpacing: 0,
+          textTransform: 'none',
+        },
+      })
+    );
+    elements.push(
+      defaultText({
+        id: uuid(),
+        x: 80 + badgeSize + 20,
+        y: rowY,
+        width: SLIDE_WIDTH - 160 - badgeSize - 20,
+        height: badgeSize,
+        content: item,
+        zIndex: 2,
+        verticalAlign: 'middle',
+        style: {
+          fontFamily: theme.fonts.body,
+          fontSize: 19,
+          fontWeight: 400,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: c.text,
+          textAlign: 'left',
+          lineHeight: 1.3,
+          letterSpacing: 0,
+          textTransform: 'none',
+        },
+      })
+    );
+  });
+
+  return elements;
+}
+
+function buildChartElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [...buildHeader(d.title, 'Gráfico', c, theme)];
+
+  const chart = d.chart ?? { chartType: 'bar' as const, labels: ['A', 'B', 'C'], series: [{ name: 'Série 1', values: [1, 2, 3] }] };
+  elements.push(
+    defaultChart({
+      id: uuid(),
+      x: 120,
+      y: 148,
+      width: SLIDE_WIDTH - 240,
+      height: SLIDE_HEIGHT - 200,
+      chartType: chart.chartType,
+      labels: chart.labels,
+      series: chart.series,
+      colors: [c.primary, c.accent, c.secondary, theme.colors.textSecondary],
+      showLegend: chart.series.length > 1 || chart.chartType === 'pie',
+      title: chart.title,
+      zIndex: 2,
+    })
+  );
+
+  return elements;
+}
+
+function buildTableElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [...buildHeader(d.title, 'Tabela', c, theme)];
+
+  const columns = d.columns?.length ? d.columns : [{ heading: 'Coluna', rows: ['—'] }];
+  const rowCount = Math.max(...columns.map((col) => col.rows.length), 0);
+
+  // style.color é setado explicitamente (em vez de deixar o fallback hardcoded do TableEl,
+  // que não acompanha troca de tema) para que setTheme consiga remapear a cor do corpo da tabela.
+  const headerRow: TableCell[] = columns.map((col) => ({ content: col.heading, style: {}, background: 'transparent' }));
+  const bodyRows: TableCell[][] = Array.from({ length: rowCount }, (_, r) =>
+    columns.map((col): TableCell => ({ content: col.rows[r] ?? '', style: { color: c.text }, background: 'transparent' }))
+  );
+
+  elements.push(
+    defaultTable({
+      id: uuid(),
+      x: 80,
+      y: 148,
+      width: SLIDE_WIDTH - 160,
+      height: SLIDE_HEIGHT - 200,
+      rows: [headerRow, ...bodyRows],
+      headerRow: true,
+      headerCol: false,
+      borderColor: c.border,
+      headerBackground: c.primary,
+      headerTextColor: onColor(c.primary, theme),
+      alternateRowColor: true,
+      alternateColor: c.surface,
+      zIndex: 2,
+    })
+  );
+
+  return elements;
+}
+
+function buildImageSplitElements(d: AISlideSpec['data'], c: Theme['colors'], theme: Theme): SlideElement[] {
+  const elements: SlideElement[] = [];
+  const half = SLIDE_WIDTH / 2;
+
+  // Metade da imagem (ou placeholder, quando não há src — a IA não inventa imagens)
+  if (d.image?.src) {
+    elements.push(
+      defaultImage({
+        id: uuid(),
+        x: half,
+        y: 0,
+        width: half,
+        height: SLIDE_HEIGHT,
+        src: d.image.src,
+        alt: d.image.alt ?? '',
+        objectFit: 'cover',
+        zIndex: 1,
+      })
+    );
+  } else {
+    elements.push(
+      defaultShape({
+        id: uuid(),
+        x: half,
+        y: 0,
+        width: half,
+        height: SLIDE_HEIGHT,
+        fill: c.surface,
+        zIndex: 0,
+      })
+    );
+    elements.push(
+      defaultIcon({
+        id: uuid(),
+        x: half + half / 2 - 32,
+        y: SLIDE_HEIGHT / 2 - 32,
+        width: 64,
+        height: 64,
+        iconName: 'Image',
+        color: c.border,
+        background: 'transparent',
+        zIndex: 1,
+      })
+    );
+  }
+
+  // Metade de texto
+  elements.push(
+    defaultShape({
+      id: uuid(),
+      x: 64,
+      y: 56,
+      width: 4,
+      height: 44,
+      fill: c.primary,
+      zIndex: 1,
+    })
+  );
+  elements.push(
+    defaultText({
+      id: uuid(),
+      x: 80,
+      y: 52,
+      width: half - 140,
+      height: 90,
+      content: d.title ?? 'Título',
+      zIndex: 2,
+      style: {
+        fontFamily: theme.fonts.heading,
+        fontSize: 26,
+        fontWeight: 700,
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        color: c.text,
+        textAlign: 'left',
+        lineHeight: 1.2,
+        letterSpacing: -0.2,
+        textTransform: 'none',
+      },
+    })
+  );
+
+  const bullets = d.bullets ?? (d.content ? [d.content] : []);
+  if (bullets.length > 0) {
+    elements.push(
+      defaultText({
+        id: uuid(),
+        x: 80,
+        y: 160,
+        width: half - 140,
+        height: SLIDE_HEIGHT - 220,
+        content: bullets.map((b) => `• ${b}`).join('\n'),
+        zIndex: 2,
+        padding: 0,
+        style: {
+          fontFamily: theme.fonts.body,
+          fontSize: 16,
+          fontWeight: 400,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: c.textSecondary,
+          textAlign: 'left',
+          lineHeight: 1.7,
+          letterSpacing: 0,
+          textTransform: 'none',
+        },
+      })
+    );
+  }
+
+  return elements;
 }
 
 export function createBlankSlide(): Slide {
@@ -719,6 +1249,27 @@ export function createSlideFromLayout(layout: LayoutType, theme: Theme): Slide {
     },
     quote: { quote: 'A única forma de fazer um ótimo trabalho é amar o que você faz.', attribution: 'Steve Jobs' },
     closing: { title: 'Obrigado', subtitle: 'Perguntas?' },
+    metrics: {
+      title: 'Métricas',
+      metrics: [
+        { value: '42%', label: 'crescimento', delta: '+8pp' },
+        { value: '128', label: 'novos clientes' },
+        { value: 'R$ 1,2M', label: 'receita' },
+      ],
+    },
+    agenda: { title: 'Agenda', bullets: ['Primeiro tópico', 'Segundo tópico', 'Terceiro tópico'] },
+    chart: {
+      title: 'Gráfico',
+      chart: { chartType: 'bar', labels: ['Jan', 'Fev', 'Mar', 'Abr'], series: [{ name: 'Série 1', values: [40, 65, 50, 80] }] },
+    },
+    table: {
+      title: 'Tabela',
+      columns: [
+        { heading: 'Item', rows: ['Linha 1', 'Linha 2', 'Linha 3'] },
+        { heading: 'Valor', rows: ['—', '—', '—'] },
+      ],
+    },
+    'image-split': { title: 'Título', bullets: ['Primeiro ponto', 'Segundo ponto', 'Terceiro ponto'], image: {} },
   };
 
   return buildSlideFromSpec({ layout, data: defaultData[layout] }, theme);

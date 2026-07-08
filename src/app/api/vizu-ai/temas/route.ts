@@ -28,6 +28,7 @@ function descreverTema(id: string): string {
     rose:     'Vermelho/rosa sobre fundo branco. Enérgico e criativo.',
     ocean:    'Azul-céu sobre fundo branco. Leve e tecnológico.',
     mono:     'Preto sobre off-white. Minimalista e editorial.',
+    gerdau:   'Azul institucional (#003DA5) e amarelo (#FFC72C) sobre fundo off-white, tipografia Archivo. Identidade corporativa Gerdau.',
   };
   return descricoes[id] ?? 'Tema personalizado.';
 }
@@ -40,6 +41,7 @@ function recomendarUso(id: string): string {
     rose:     'Lançamentos, marketing, criatividade, moda.',
     ocean:    'SaaS, finanças, viagem, bem-estar.',
     mono:     'Editorial, portfólio, design, arquitetura.',
+    gerdau:   'Apresentações institucionais e corporativas da Gerdau.',
   };
   return usos[id] ?? 'Uso geral.';
 }

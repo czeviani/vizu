@@ -4,7 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { useHistory } from './useHistory';
 import type {
   Presentation, Slide, SlideElement, Theme, LayoutType,
-  TextElement, ShapeElement, IconElement, ThemeColors,
+  TextElement, ShapeElement, IconElement, ImageElement, TableElement, ChartElement, ThemeColors,
 } from '@/types/slide';
 import { createSlideFromLayout, createBlankSlide } from '@/lib/templates';
 import { storage } from '@/lib/storage';
@@ -182,6 +182,11 @@ export function usePresentation(initial: Presentation) {
           }
 
           // Update element colors
+          const mapBorder = <B extends { color: string }>(border: B): B =>
+            border.color && border.color !== 'transparent' ? { ...border, color: mapColor(border.color) } : border;
+          const mapShadow = <S extends { color: string }>(shadow: S): S =>
+            shadow.color ? { ...shadow, color: mapColor(shadow.color) } : shadow;
+
           const elements = slide.elements.map((el): SlideElement => {
             if (el.type === 'text') {
               const te = el as TextElement;
@@ -189,15 +194,49 @@ export function usePresentation(initial: Presentation) {
                 ...te,
                 style: { ...te.style, color: mapColor(te.style.color) },
                 background: te.background !== 'transparent' ? mapColor(te.background) : te.background,
+                border: mapBorder(te.border),
               };
             }
             if (el.type === 'shape') {
               const se = el as ShapeElement;
-              return { ...se, fill: mapColor(se.fill) };
+              return { ...se, fill: mapColor(se.fill), border: mapBorder(se.border), shadow: mapShadow(se.shadow) };
+            }
+            if (el.type === 'image') {
+              const ie = el as ImageElement;
+              return { ...ie, border: mapBorder(ie.border), shadow: mapShadow(ie.shadow) };
             }
             if (el.type === 'icon') {
               const ie = el as IconElement;
-              return { ...ie, color: mapColor(ie.color) };
+              return {
+                ...ie,
+                color: mapColor(ie.color),
+                background: ie.background !== 'transparent' ? mapColor(ie.background) : ie.background,
+                border: mapBorder(ie.border),
+              };
+            }
+            if (el.type === 'table') {
+              const tb = el as TableElement;
+              return {
+                ...tb,
+                borderColor: mapColor(tb.borderColor),
+                headerBackground: mapColor(tb.headerBackground),
+                headerTextColor: mapColor(tb.headerTextColor),
+                alternateColor: mapColor(tb.alternateColor),
+                rows: tb.rows.map((row) =>
+                  row.map((cell) => ({
+                    ...cell,
+                    background: cell.background !== 'transparent' ? mapColor(cell.background) : cell.background,
+                    style: cell.style.color ? { ...cell.style, color: mapColor(cell.style.color) } : cell.style,
+                  }))
+                ),
+              };
+            }
+            if (el.type === 'chart') {
+              const ch = el as ChartElement;
+              return { ...ch, colors: ch.colors.map(mapColor) };
+            }
+            if (el.type === 'line') {
+              return { ...el, color: mapColor(el.color) };
             }
             return el;
           });

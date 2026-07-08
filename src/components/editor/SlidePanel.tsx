@@ -24,6 +24,11 @@ const LAYOUTS: { id: LayoutType; label: string; icon: string }[] = [
   { id: 'comparison', label: t.layout_comparison, icon: 'M3 3h18v18H3zM12 3v18' },
   { id: 'quote', label: t.layout_quote, icon: 'M3 3h18v18H3zM7 9h3M7 13h10M7 17h7' },
   { id: 'closing', label: t.layout_closing, icon: 'M3 3h18v18H3zM8 12h8' },
+  { id: 'metrics', label: t.layout_metrics, icon: 'M3 3h18v18H3zM7 8v10M12 12v6M17 5v13' },
+  { id: 'agenda', label: t.layout_agenda, icon: 'M3 3h18v18H3zM8 8h10M8 13h10M8 18h10M4.5 8h.01M4.5 13h.01M4.5 18h.01' },
+  { id: 'chart', label: t.layout_chart, icon: 'M3 3h18v18H3zM7 16l3-4 3 2 4-6' },
+  { id: 'table', label: t.layout_table, icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18' },
+  { id: 'image-split', label: t.layout_image_split, icon: 'M3 3h18v18H3zM12 3v18M15 9l2 2-2 2' },
 ];
 
 export function SlidePanel({
@@ -286,7 +291,7 @@ export function SlidePanel({
                 background: 'var(--surface-2)',
                 position: 'relative',
               }}>
-                <SlideMiniature slide={slide} presentation={presentation} />
+                <SlideMiniature slide={slide} presentation={presentation} width={120} />
 
                 {/* Hover actions */}
                 {isHovered && !isActive && (

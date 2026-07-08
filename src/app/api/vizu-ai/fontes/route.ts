@@ -31,6 +31,22 @@ export async function GET() {
       melhor_para: ['tecnologia', 'código', 'dados'],
       pesos_disponiveis: [400, 700],
     },
+    {
+      id: 'Archivo',
+      nome: 'Archivo',
+      categoria: 'sans-serif',
+      descricao: 'Grotesca geométrica de alto contraste. Usada no tema institucional Gerdau (heading e body).',
+      melhor_para: ['institucional', 'corporativo', 'Gerdau'],
+      pesos_disponiveis: [400, 500, 600, 700, 800],
+    },
+    {
+      id: 'Archivo Narrow',
+      nome: 'Archivo Narrow',
+      categoria: 'sans-serif',
+      descricao: 'Variante condensada da Archivo. Útil para rótulos e dados densos (tabelas, métricas) sem quebrar layout.',
+      melhor_para: ['institucional', 'dados', 'tabelas'],
+      pesos_disponiveis: [400, 500, 600, 700],
+    },
   ];
 
   const escala_tipografica = [
@@ -47,6 +63,7 @@ export async function GET() {
   const pares_recomendados = [
     { heading: 'Inter', body: 'Inter', descricao: 'Padrão — consistência máxima' },
     { heading: 'Georgia', body: 'Inter', descricao: 'Editorial — títulos com personalidade, corpo limpo' },
+    { heading: 'Archivo', body: 'Archivo', descricao: 'Institucional Gerdau — grotesca geométrica em heading e body' },
   ];
 
   return NextResponse.json({ fontes, escala_tipografica, pares_recomendados });
