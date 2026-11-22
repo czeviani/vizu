@@ -12,7 +12,7 @@ PORT=3003 npm run dev         # servidor em localhost:3003
 npm run build
 
 # Deploy (auto via push, mas manual se precisar)
-git add . && git commit -m "..." && git push
+git add <arquivos> && git commit -m "..." && git push
 # Vercel detecta push na main e deploya automaticamente em vizuapp.vercel.app
 ```
 
@@ -32,7 +32,7 @@ posição/tamanho em EMU (±0.02"), rotação, opacidade, z-order, bullets nativ
 apresentador, fundos, embed de imagem/ícone como bytes reais, tabela/gráfico nativos e o tema
 Gerdau. `iconToDataUrl` é mockado nos testes (usa `document.createElement('canvas')`, indisponível
 em Node). O teste de fidelidade visual (SSIM via LibreOffice) só roda se `soffice` estiver
-disponível no PATH — nesta VPS não está, então fica `skipped`.
+no PATH (nesta VPS está em `/usr/bin/soffice`); sem ele fica `skipped`.
 
 ## Regras críticas
 
